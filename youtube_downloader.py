@@ -53,7 +53,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.url_var = ctk.StringVar()
         self.quality_var = ctk.StringVar(value=config.get("quality", "Highly Compatible (MP4 - 1080p Max)"))
         self.path_var = ctk.StringVar(value=config.get("download_path"))
-        self.autoclear_var = ctk.BooleanVar(value=config.get("autoclear", True))
+        self.autoclear_var = ctk.BooleanVar(value=config.get("autoclear", False))
         self.playlist_var = ctk.BooleanVar(value=config.get("playlist", True))
         self.theme_var = ctk.StringVar(value=config.get("theme", "Light"))
         
@@ -94,7 +94,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         defaults = {
             "download_path": default_path,
             "quality": "Highly Compatible (MP4 - 1080p Max)",
-            "autoclear": True,
+            "autoclear": False,
             "playlist": True,
             "theme": "Light",
             "show_log": False,
@@ -185,7 +185,7 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         self.path_var.set(default_path)
         self.quality_var.set("Highly Compatible (MP4 - 1080p Max)")
-        self.autoclear_var.set(True)
+        self.autoclear_var.set(False)
         self.playlist_var.set(True)
         self.theme_var.set("Light")
         self.show_log_var.set(False)
