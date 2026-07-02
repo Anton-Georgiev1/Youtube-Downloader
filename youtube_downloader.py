@@ -10,8 +10,7 @@ import tkinter as tk
 from tkinter import filedialog
 import yt_dlp
 
-# Set appearance and default color theme
-ctk.set_appearance_mode("System")
+# Set color theme globally
 ctk.set_default_color_theme("blue")
 
 CONFIG_FILE = "ytdl_config.json"
@@ -42,11 +41,6 @@ class YouTubeDownloaderApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        # Window configuration
-        self.title("⬇️ YouTube Downloader")
-        self.geometry("750x950")
-        self.minsize(650, 950)
-
         # Threading Events for Pause and Stop mechanics
         self.pause_event = threading.Event()
         self.pause_event.set()  # Set to True (Running state) by default
@@ -61,8 +55,17 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.path_var = ctk.StringVar(value=config.get("download_path"))
         self.autoclear_var = ctk.BooleanVar(value=config.get("autoclear", True))
         self.playlist_var = ctk.BooleanVar(value=config.get("playlist", True))
+        self.theme_var = ctk.StringVar(value=config.get("theme", "Dark"))
 
-        # Locate FFmpeg intelligently
+        # Apply appearance configuration before building components
+        ctk.set_appearance_mode(self.theme_var.get())
+
+        # Window configuration
+        self.title("⬇️ YouTube Downloader")
+        self.geometry("750x970")
+        self.minsize(650, 970)
+
+        # Locate FFmpeg
         self.ffmpeg_path = self.get_ffmpeg_path()
         self.ffmpeg_available = self.ffmpeg_path is not None
 
@@ -85,7 +88,8 @@ class YouTubeDownloaderApp(ctk.CTk):
             "download_path": default_path,
             "quality": "Highly Compatible (MP4 - 1080p Max)",
             "autoclear": True,
-            "playlist": True
+            "playlist": True,
+            "theme": "Dark"
         }
 
         try:
@@ -104,7 +108,8 @@ class YouTubeDownloaderApp(ctk.CTk):
                 "download_path": self.path_var.get(),
                 "quality": self.quality_var.get(),
                 "autoclear": self.autoclear_var.get(),
-                "playlist": self.playlist_var.get()
+                "playlist": self.playlist_var.get(),
+                "theme": self.theme_var.get()
             }
             with open(CONFIG_FILE, "w") as f:
                 json.dump(data, f)
@@ -129,6 +134,29 @@ class YouTubeDownloaderApp(ctk.CTk):
             return sys_path
             
         return None
+
+    def change_theme(self, selection):
+        """Apply the selected UI appearance theme dynamically."""
+        ctk.set_appearance_mode(selection)
+        self.save_config()
+        self.show_log(f"🎨 Theme changed to: {selection}")
+
+    def reset_defaults(self):
+        """Restore all variables and settings back to original defaults."""
+        default_path = str(Path.home() / "Downloads")
+        if not os.path.exists(default_path):
+            default_path = os.getcwd()
+
+        self.path_var.set(default_path)
+        self.quality_var.set("Highly Compatible (MP4 - 1080p Max)")
+        self.autoclear_var.set(True)
+        self.playlist_var.set(True)
+        self.theme_var.set("Dark")
+
+        # Apply reset UI styles
+        ctk.set_appearance_mode("Dark")
+        self.save_config()
+        self.show_log("🔄 Configuration reset to default settings.")
 
     def setup_ui(self):
         self.grid_rowconfigure(4, weight=1)
@@ -248,7 +276,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.ffmpeg_status_lbl = ctk.CTkLabel(self.settings_frame, text=ffmpeg_status, text_color=ffmpeg_color, font=ctk.CTkFont(weight="bold", size=12))
         self.ffmpeg_status_lbl.grid(row=0, column=1, columnspan=2, padx=15, pady=(10, 5), sticky="e")
 
-        # Quality dropdown (NOW ONLY MP4 - 1080p & MP3)
+        # Quality dropdown
         self.quality_lbl = ctk.CTkLabel(self.settings_frame, text="Preferred Quality:", font=ctk.CTkFont(weight="bold"))
         self.quality_lbl.grid(row=1, column=0, padx=(15, 10), pady=10, sticky="w")
 
@@ -275,9 +303,22 @@ class YouTubeDownloaderApp(ctk.CTk):
         )
         self.browse_btn.grid(row=2, column=2, padx=(0, 15), pady=(0, 15), sticky="e")
 
-        # Playlist Switch
+        # App Theme Select Menu
+        self.theme_lbl = ctk.CTkLabel(self.settings_frame, text="App Theme:", font=ctk.CTkFont(weight="bold"))
+        self.theme_lbl.grid(row=3, column=0, padx=(15, 10), pady=(0, 15), sticky="w")
+
+        self.theme_menu = ctk.CTkOptionMenu(
+            self.settings_frame,
+            values=["Light", "Dark"],
+            variable=self.theme_var,
+            command=self.change_theme
+        )
+        self.theme_menu.grid(row=3, column=1, columnspan=2, padx=(0, 15), pady=(0, 15), sticky="ew")
+
+        # Switches & Configuration Controls (Playlist Switch & Reset Button)
         self.switches_frame = ctk.CTkFrame(self.settings_frame, fg_color="transparent")
-        self.switches_frame.grid(row=3, column=0, columnspan=3, padx=15, pady=(5, 15), sticky="w")
+        self.switches_frame.grid(row=4, column=0, columnspan=3, padx=15, pady=(5, 15), sticky="ew")
+        self.switches_frame.grid_columnconfigure(0, weight=1)
 
         self.playlist_switch = ctk.CTkSwitch(
             self.switches_frame,
@@ -287,6 +328,18 @@ class YouTubeDownloaderApp(ctk.CTk):
             font=ctk.CTkFont(size=12, weight="bold")
         )
         self.playlist_switch.grid(row=0, column=0, padx=(0, 20), pady=5, sticky="w")
+
+        self.reset_btn = ctk.CTkButton(
+            self.switches_frame,
+            text="🔄 Reset Defaults",
+            width=130,
+            fg_color=("gray75", "gray30"),
+            hover_color=("gray65", "gray40"),
+            text_color=("black", "white"),
+            command=self.reset_defaults,
+            font=ctk.CTkFont(size=12, weight="bold")
+        )
+        self.reset_btn.grid(row=0, column=1, padx=(0, 0), pady=5, sticky="e")
 
         # ----------------------------------------------------
         # 5. DOWNLOAD ACTIONS & LIVE PROGRESS
@@ -624,9 +677,9 @@ class YouTubeDownloaderApp(ctk.CTk):
                     percentage = 0.0
 
             speed_str = d.get('_speed_str', '0 B/s').strip()
-            eta_str = d.get('_eta_str', 'Unknown').strip()
+            text_eta = d.get('_eta_str', 'Unknown').strip()
 
-            self.after(0, self._on_download_progress, percentage, speed_str, eta_str)
+            self.after(0, self._on_download_progress, percentage, speed_str, text_eta)
 
         elif status == 'finished':
             self.after(0, self._on_download_part_finished, d.get('filename', 'file'))
