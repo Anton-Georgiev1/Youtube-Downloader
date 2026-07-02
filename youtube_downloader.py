@@ -1,3 +1,5 @@
+# youtube_downloader.py
+
 import os
 import sys
 import shutil
@@ -9,6 +11,9 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import yt_dlp
+
+# Import dictionaries securely from languages.py
+from languages import LANGUAGES, QUALITY_MAP
 
 # Set color theme globally
 ctk.set_default_color_theme("blue")
@@ -51,7 +56,17 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         # Main variables (Initialized with saved values or defaults)
         self.url_var = ctk.StringVar()
-        self.quality_var = ctk.StringVar(value=config.get("quality", "Highly Compatible (MP4 - 1080p Max)"))
+        
+        # Default Language configuration setup
+        selected_lang = config.get("language", "English")
+        self.language_var = ctk.StringVar(value=selected_lang)
+        
+        # Load quality preference based on selected language layout
+        canonical_quality = config.get("quality", "Highly Compatible (MP4 - 1080p Max)")
+        vals = QUALITY_MAP.get(selected_lang, QUALITY_MAP["English"])
+        translated_quality = vals[0] if canonical_quality == "Highly Compatible (MP4 - 1080p Max)" else vals[1]
+        
+        self.quality_var = ctk.StringVar(value=translated_quality)
         self.path_var = ctk.StringVar(value=config.get("download_path"))
         self.autoclear_var = ctk.BooleanVar(value=config.get("autoclear", False))
         self.playlist_var = ctk.BooleanVar(value=config.get("playlist", True))
@@ -79,6 +94,10 @@ class YouTubeDownloaderApp(ctk.CTk):
         # Apply visibility settings based on loaded configurations
         self.update_log_visibility()
 
+        # Update labels dynamically and match dropdown configuration lists
+        self.update_ui_language()
+        self.update_quality_menu()
+
         # Log initial environment info
         self.log_initial_status()
 
@@ -98,7 +117,8 @@ class YouTubeDownloaderApp(ctk.CTk):
             "playlist": True,
             "theme": "Light",
             "show_log": False,
-            "show_popup": True
+            "show_popup": True,
+            "language": "English"
         }
 
         try:
@@ -115,12 +135,13 @@ class YouTubeDownloaderApp(ctk.CTk):
         try:
             data = {
                 "download_path": self.path_var.get(),
-                "quality": self.quality_var.get(),
+                "quality": self.get_canonical_quality(self.quality_var.get()),
                 "autoclear": self.autoclear_var.get(),
                 "playlist": self.playlist_var.get(),
                 "theme": self.theme_var.get(),
                 "show_log": self.show_log_var.get(),
-                "show_popup": self.show_popup_var.get()
+                "show_popup": self.show_popup_var.get(),
+                "language": self.language_var.get()
             }
             with open(CONFIG_FILE, "w") as f:
                 json.dump(data, f)
@@ -184,7 +205,13 @@ class YouTubeDownloaderApp(ctk.CTk):
             default_path = os.getcwd()
 
         self.path_var.set(default_path)
+        self.language_var.set("English")
+        
+        # Reset Quality menu items back to English Defaults
+        vals = QUALITY_MAP["English"]
+        self.quality_menu.configure(values=vals)
         self.quality_var.set("Highly Compatible (MP4 - 1080p Max)")
+        
         self.autoclear_var.set(False)
         self.playlist_var.set(True)
         self.theme_var.set("Light")
@@ -195,8 +222,107 @@ class YouTubeDownloaderApp(ctk.CTk):
         ctk.set_appearance_mode("Light")
         self.theme_btn.configure(text="🌞 Light")
         self.update_log_visibility()
+        self.update_ui_language()
         self.save_config()
         self.show_log("🔄 Configuration reset to default settings.")
+
+    # ----------------------------------------------------
+    # MULTI-LANGUAGE MANAGEMENT
+    # ----------------------------------------------------
+    def get_canonical_quality(self, value):
+        """Maps dynamic translated quality texts to internal system parameters."""
+        for lang, values in QUALITY_MAP.items():
+            if value in values:
+                if value == values[0]:
+                    return "Highly Compatible (MP4 - 1080p Max)"
+                elif value == values[1]:
+                    return "Audio Only (MP3)"
+        return "Highly Compatible (MP4 - 1080p Max)"
+
+    def change_language(self, *args):
+        """Trigger update of all localized interface assets upon interaction."""
+        self.update_ui_language()
+        self.update_quality_menu()
+        self.save_config()
+        self.show_log(f"🌐 Language updated to: {self.language_var.get()}")
+
+    def update_ui_language(self):
+        """Iterate UI nodes and overwrite text contents based on translated map values."""
+        lang = self.language_var.get()
+        t = LANGUAGES.get(lang, LANGUAGES["English"])
+
+        # Main Header UI assets
+        self.title_label.configure(text=t["title"])
+        self.subtitle_label.configure(text=t["subtitle"])
+
+        # Input Frame elements
+        self.url_label.configure(text=t["url_label"])
+        self.url_entry.configure(placeholder_text=t["url_placeholder"])
+        self.paste_btn.configure(text=t["paste"])
+        self.copy_btn.configure(text=t["copy"])
+        self.clear_btn.configure(text=t["clear"])
+        self.autoclear_switch.configure(text=t["autoclear"])
+
+        if self.analyze_button.cget("state") == "disabled":
+            self.analyze_button.configure(text=t["analyzing"])
+        else:
+            self.analyze_button.configure(text=t["analyze"])
+
+        # Metadata Layout translations
+        self.meta_title_lbl.configure(text=t["meta_title"])
+        self.video_title_lbl.configure(text=t["video_title"])
+        self.channel_lbl.configure(text=t["video_channel"])
+        self.duration_lbl.configure(text=t["video_duration"])
+
+        # Check and translate placeholder text safely
+        current_meta_title_text = self.video_title_val.cget("text")
+        no_video_placeholders = [LANGUAGES[l]["no_video"] for l in LANGUAGES] + ["None (Enter a URL and click Analyze)"]
+        if current_meta_title_text in no_video_placeholders:
+            self.video_title_val.configure(text=t["no_video"])
+
+        # Settings Configuration
+        self.settings_title.configure(text=t["settings_title"])
+        self.quality_lbl.configure(text=t["quality_lbl"])
+        self.dir_lbl.configure(text=t["destination_lbl"])
+        self.browse_btn.configure(text=t["browse"])
+
+        ffmpeg_text = t["ffmpeg_active"] if self.ffmpeg_available else t["ffmpeg_missing"]
+        self.ffmpeg_status_lbl.configure(text=ffmpeg_text)
+
+        # Toggle Switch components
+        self.playlist_switch.configure(text=t["playlist_lbl"])
+        self.show_log_switch.configure(text=t["show_log_lbl"])
+        self.show_popup_switch.configure(text=t["show_popup_lbl"])
+        self.reset_btn.configure(text=t["reset_defaults"])
+
+        # Control panel layout assets
+        if self.download_button.cget("state") == "disabled":
+            self.download_button.configure(text=t["downloading"])
+        else:
+            self.download_button.configure(text=t["start_download"])
+
+        if self.pause_button.cget("state") == "normal":
+            if self.pause_event.is_set():
+                self.pause_button.configure(text=t["pause"])
+            else:
+                self.pause_button.configure(text=t["resume"])
+        else:
+            self.pause_button.configure(text=t["pause"])
+
+        self.stop_button.configure(text=t["stop"])
+        self.log_lbl.configure(text=t["log_title"])
+
+    def update_quality_menu(self):
+        """Update available choices on the quality configuration menu dropdown."""
+        lang = self.language_var.get()
+        vals = QUALITY_MAP.get(lang, QUALITY_MAP["English"])
+        
+        # Save previous setting to set match equivalent index values after mapping update
+        current_canonical = self.get_canonical_quality(self.quality_var.get())
+        
+        self.quality_menu.configure(values=vals)
+        translated_val = vals[0] if current_canonical == "Highly Compatible (MP4 - 1080p Max)" else vals[1]
+        self.quality_var.set(translated_val)
 
     def setup_ui(self):
         self.grid_rowconfigure(4, weight=1)
@@ -209,6 +335,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.header_frame.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="ew")
         self.header_frame.grid_columnconfigure(0, weight=1)
         self.header_frame.grid_columnconfigure(1, weight=0)
+        self.header_frame.grid_columnconfigure(2, weight=0)
 
         self.title_label = ctk.CTkLabel(
             self.header_frame, 
@@ -217,7 +344,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         )
         self.title_label.grid(row=0, column=0, padx=20, pady=(15, 5), sticky="w")
 
-        # Theme Toggle Button next to the Title
+        # Theme Toggle Button (Row 0, Column 1)
         current_theme = self.theme_var.get()
         btn_text = "🌞 Light" if current_theme == "Light" else "🌙 Dark"
         self.theme_btn = ctk.CTkButton(
@@ -229,17 +356,29 @@ class YouTubeDownloaderApp(ctk.CTk):
             font=ctk.CTkFont(size=12, weight="bold"),
             fg_color=("gray80", "gray25"),
             hover_color=("gray70", "gray35"),
-            text_color=("black", "white")  # Standard legibility text colors
+            text_color=("black", "white")
         )
-        self.theme_btn.grid(row=0, column=1, padx=20, pady=(15, 5), sticky="e")
+        self.theme_btn.grid(row=0, column=1, padx=(10, 10), pady=(15, 5), sticky="e")
 
+        # Language dropdown selector right next to Theme (Row 0, Column 2)
+        self.language_menu = ctk.CTkOptionMenu(
+            self.header_frame,
+            values=list(LANGUAGES.keys()),
+            variable=self.language_var,
+            command=self.change_language,
+            width=110,
+            height=32
+        )
+        self.language_menu.grid(row=0, column=2, padx=(0, 20), pady=(15, 5), sticky="e")
+
+        # Description subtitle labels spanning across all three grid alignments
         self.subtitle_label = ctk.CTkLabel(
             self.header_frame, 
             text="Download high-quality videos and audio seamlessly.",
             font=ctk.CTkFont(size=13),
             text_color="gray"
         )
-        self.subtitle_label.grid(row=1, column=0, columnspan=2, padx=20, pady=(0, 15), sticky="w")
+        self.subtitle_label.grid(row=1, column=0, columnspan=3, padx=20, pady=(0, 15), sticky="w")
 
         # ----------------------------------------------------
         # 2. INPUT & ANALYZE FRAME
@@ -522,14 +661,15 @@ class YouTubeDownloaderApp(ctk.CTk):
     # BUTTON CONTROLS
     # ----------------------------------------------------
     def toggle_pause(self):
+        t = LANGUAGES.get(self.language_var.get(), LANGUAGES["English"])
         if self.pause_event.is_set():
             self.pause_event.clear()
-            self.pause_button.configure(text="▶️ Resume")
+            self.pause_button.configure(text=f"▶️ {t['resume'].split()[-1] if len(t['resume'].split()) > 1 else t['resume']}")
             self.show_log("⏸️ Command received: Download paused.")
             self.speed_eta_label.configure(text="Download Paused")
         else:
             self.pause_event.set()
-            self.pause_button.configure(text="⏸️ Pause")
+            self.pause_button.configure(text=t["pause"])
             self.show_log("▶️ Command received: Download resumed.")
 
     def stop_download(self):
@@ -545,12 +685,14 @@ class YouTubeDownloaderApp(ctk.CTk):
     # ----------------------------------------------------
     def start_fetch_info(self):
         url = self.url_var.get().strip()
+        t = LANGUAGES.get(self.language_var.get(), LANGUAGES["English"])
+        
         if not url:
             self.show_log("❌ Error: Please paste a YouTube link before analyzing.")
             return
 
-        self.analyze_button.configure(state="disabled", text="Analyzing...")
-        self.video_title_val.configure(text="Fetching details from YouTube...", text_color="yellow")
+        self.analyze_button.configure(state="disabled", text=t["analyzing"])
+        self.video_title_val.configure(text=t["fetching"], text_color="yellow")
         self.channel_val.configure(text="--", text_color="gray")
         self.duration_val.configure(text="--", text_color="gray")
 
@@ -590,17 +732,19 @@ class YouTubeDownloaderApp(ctk.CTk):
             self.after(0, self._on_fetch_error, str(e))
 
     def _on_fetch_success(self, title, uploader, duration_str):
+        t = LANGUAGES.get(self.language_var.get(), LANGUAGES["English"])
         self.video_title_val.configure(text=title, text_color=("black", "white"))
         self.channel_val.configure(text=uploader, text_color=("black", "white"))
         self.duration_val.configure(text=duration_str, text_color=("black", "white"))
-        self.analyze_button.configure(state="normal", text="Analyze Link")
+        self.analyze_button.configure(state="normal", text=t["analyze"])
         self.show_log(f"✅ Successfully fetched info: \"{title}\"")
 
     def _on_fetch_error(self, error_message):
-        self.video_title_val.configure(text="Failed to fetch video details.", text_color="red")
+        t = LANGUAGES.get(self.language_var.get(), LANGUAGES["English"])
+        self.video_title_val.configure(text=t["fetch_failed"], text_color="red")
         self.channel_val.configure(text="--", text_color="gray")
         self.duration_val.configure(text="--", text_color="gray")
-        self.analyze_button.configure(state="normal", text="Analyze Link")
+        self.analyze_button.configure(state="normal", text=t["analyze"])
         self.show_log(f"❌ Analysis Error: {error_message}")
 
     # ----------------------------------------------------
@@ -608,6 +752,7 @@ class YouTubeDownloaderApp(ctk.CTk):
     # ----------------------------------------------------
     def start_download(self):
         url = self.url_var.get().strip()
+        t = LANGUAGES.get(self.language_var.get(), LANGUAGES["English"])
         if not url:
             self.show_log("❌ Error: Please enter a YouTube link.")
             return
@@ -620,7 +765,8 @@ class YouTubeDownloaderApp(ctk.CTk):
         # Explicitly save configs in case the user manually typed a new path into the Entry box
         self.save_config()
 
-        quality = self.quality_var.get()
+        # Translate dynamic string formats to standard parameter equivalent systems
+        quality = self.get_canonical_quality(self.quality_var.get())
 
         if not self.ffmpeg_available:
             self.show_log(f"❌ Cannot start download! FFmpeg is missing on your computer.")
@@ -631,10 +777,10 @@ class YouTubeDownloaderApp(ctk.CTk):
             self.show_log("4. Restart this app, and the red missing label should turn green.")
             return
 
-        self.download_button.configure(state="disabled", text="⏳ Downloading...")
+        self.download_button.configure(state="disabled", text=t["downloading"])
         self.analyze_button.configure(state="disabled")
         
-        self.pause_button.configure(state="normal", text="⏸️ Pause")
+        self.pause_button.configure(state="normal", text=t["pause"])
         self.stop_button.configure(state="normal")
         self.stop_event.clear()
         self.pause_event.set()
@@ -756,12 +902,14 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.show_log(f"📦 Completed downloading part: {name}")
 
     def _reset_buttons(self):
-        self.download_button.configure(state="normal", text="⚡ Start Download")
+        t = LANGUAGES.get(self.language_var.get(), LANGUAGES["English"])
+        self.download_button.configure(state="normal", text=t["start_download"])
         self.analyze_button.configure(state="normal")
-        self.pause_button.configure(state="disabled", text="⏸️ Pause")
+        self.pause_button.configure(state="disabled", text=t["pause"])
         self.stop_button.configure(state="disabled")
 
     def _on_download_success(self):
+        t = LANGUAGES.get(self.language_var.get(), LANGUAGES["English"])
         self.progress_bar.set(1.0)
         self.percentage_label.configure(text="100.0%")
         self.speed_eta_label.configure(text="Finished!")
@@ -771,12 +919,12 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         # Completion Popup Message Action (Checks switch configuration state)
         if self.show_popup_var.get():
-            messagebox.showinfo("Download Completed", "🎉 Success! Media download & conversion completed correctly!")
+            messagebox.showinfo(t["success_popup_title"], t["success_popup_msg"])
         
         # AUTO CLEAN FUNCTIONALITY (Checking the switch)
         if self.autoclear_var.get():
             self.clear_link()
-            self.video_title_val.configure(text="None (Enter a URL and click Analyze)", text_color="gray")
+            self.video_title_val.configure(text=t["no_video"], text_color="gray")
             self.channel_val.configure(text="--", text_color="gray")
             self.duration_val.configure(text="--", text_color="gray")
             self.show_log("🧹 URL field auto-cleaned for your next link.")
