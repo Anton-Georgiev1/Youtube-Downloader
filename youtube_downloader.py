@@ -44,8 +44,8 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         # Window configuration
         self.title("⬇️ YouTube Downloader")
-        self.geometry("750x850")
-        self.minsize(650, 850)
+        self.geometry("750x950")
+        self.minsize(650, 950)
 
         # Threading Events for Pause and Stop mechanics
         self.pause_event = threading.Event()
@@ -54,7 +54,7 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         # Main variables
         self.url_var = ctk.StringVar()
-        self.quality_var = ctk.StringVar(value="Source Quality (MKV)")
+        self.quality_var = ctk.StringVar(value="Source Quality (Highest Res - AVI)")
         
         # Determine default download path via config or fallback
         self.path_var = ctk.StringVar(value=self.load_config())
@@ -99,18 +99,15 @@ class YouTubeDownloaderApp(ctk.CTk):
         """Intelligently locate FFmpeg, even if it's placed right next to the script."""
         exe_name = "ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg"
         
-        # 1. Check the exact folder where this python script is located
         script_dir = os.path.dirname(os.path.abspath(__file__))
         local_path = os.path.join(script_dir, exe_name)
         if os.path.exists(local_path):
             return local_path
             
-        # 2. Check the current working directory
         cwd_path = os.path.join(os.getcwd(), exe_name)
         if os.path.exists(cwd_path):
             return cwd_path
             
-        # 3. Check System PATH environments
         sys_path = shutil.which("ffmpeg")
         if sys_path:
             return sys_path
@@ -153,13 +150,28 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.url_label = ctk.CTkLabel(self.input_frame, text="YouTube URL (Video, Playlist, or Audio):", font=ctk.CTkFont(weight="bold"))
         self.url_label.grid(row=0, column=0, columnspan=2, padx=15, pady=(10, 5), sticky="w")
 
+        # Link Toolbar Frame (Entry + Copy/Paste/Clear)
+        self.url_toolbar_frame = ctk.CTkFrame(self.input_frame, fg_color="transparent")
+        self.url_toolbar_frame.grid(row=1, column=0, columnspan=2, padx=15, pady=(0, 10), sticky="ew")
+        self.url_toolbar_frame.grid_columnconfigure(0, weight=1)
+
         self.url_entry = ctk.CTkEntry(
-            self.input_frame, 
+            self.url_toolbar_frame, 
             textvariable=self.url_var, 
             placeholder_text="..."
         )
-        self.url_entry.grid(row=1, column=0, padx=(15, 10), pady=(0, 15), sticky="ew")
+        self.url_entry.grid(row=0, column=0, padx=(0, 10), sticky="ew")
 
+        self.paste_btn = ctk.CTkButton(self.url_toolbar_frame, text="📋 Paste", width=60, command=self.paste_link)
+        self.paste_btn.grid(row=0, column=1, padx=(0, 5))
+
+        self.copy_btn = ctk.CTkButton(self.url_toolbar_frame, text="📄 Copy", width=60, command=self.copy_link)
+        self.copy_btn.grid(row=0, column=2, padx=(0, 5))
+
+        self.clear_btn = ctk.CTkButton(self.url_toolbar_frame, text="❌ Clear", width=60, command=self.clear_link)
+        self.clear_btn.grid(row=0, column=3, padx=(0, 0))
+
+        # Analyze Button
         self.analyze_button = ctk.CTkButton(
             self.input_frame, 
             text="Analyze Link", 
@@ -167,7 +179,7 @@ class YouTubeDownloaderApp(ctk.CTk):
             command=self.start_fetch_info,
             font=ctk.CTkFont(weight="bold")
         )
-        self.analyze_button.grid(row=1, column=1, padx=(0, 15), pady=(0, 15), sticky="e")
+        self.analyze_button.grid(row=2, column=0, columnspan=2, padx=15, pady=(0, 15), sticky="e")
 
         # ----------------------------------------------------
         # 3. VIDEO METADATA CARD
@@ -204,20 +216,19 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.settings_title = ctk.CTkLabel(self.settings_frame, text="Download Configuration", font=ctk.CTkFont(weight="bold", size=14))
         self.settings_title.grid(row=0, column=0, padx=15, pady=(10, 5), sticky="w")
 
-        # DYNAMIC FFMPEG STATUS INDICATOR
-        ffmpeg_status = "✅ FFmpeg: Active (MKV/MP3 Enabled)" if self.ffmpeg_available else "❌ FFmpeg: Missing (MP3/MKV Disabled)"
+        ffmpeg_status = "✅ FFmpeg: Active (AVI/MP3 Enabled)" if self.ffmpeg_available else "❌ FFmpeg: Missing (MP3/AVI Disabled)"
         ffmpeg_color = "green" if self.ffmpeg_available else "red"
         
         self.ffmpeg_status_lbl = ctk.CTkLabel(self.settings_frame, text=ffmpeg_status, text_color=ffmpeg_color, font=ctk.CTkFont(weight="bold", size=12))
         self.ffmpeg_status_lbl.grid(row=0, column=1, columnspan=2, padx=15, pady=(10, 5), sticky="e")
 
-        # Quality dropdown
+        # Quality dropdown (NOW USING AVI)
         self.quality_lbl = ctk.CTkLabel(self.settings_frame, text="Preferred Quality:", font=ctk.CTkFont(weight="bold"))
         self.quality_lbl.grid(row=1, column=0, padx=(15, 10), pady=10, sticky="w")
 
         self.quality_menu = ctk.CTkOptionMenu(
             self.settings_frame,
-            values=["Source Quality (MKV)", "Best Quality (MP4)", "Audio Only (MP3)"],
+            values=["Source Quality (Highest Res - AVI)", "Highly Compatible (MP4 - 1080p Max)", "Audio Only (MP3)"],
             variable=self.quality_var
         )
         self.quality_menu.grid(row=1, column=1, columnspan=2, padx=(0, 15), pady=10, sticky="ew")
@@ -258,7 +269,6 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.action_frame.grid_columnconfigure(0, weight=1)
         self.action_frame.grid_rowconfigure(4, weight=1)
 
-        # BUTTON CONTROLS FRAME (Start, Pause, Stop)
         self.controls_frame = ctk.CTkFrame(self.action_frame, fg_color="transparent")
         self.controls_frame.grid(row=0, column=0, padx=15, pady=15, sticky="ew")
         self.controls_frame.grid_columnconfigure((0, 1, 2), weight=1)
@@ -294,12 +304,10 @@ class YouTubeDownloaderApp(ctk.CTk):
         )
         self.stop_button.grid(row=0, column=2, padx=(5, 0), sticky="ew")
 
-        # Progress bar
         self.progress_bar = ctk.CTkProgressBar(self.action_frame)
         self.progress_bar.grid(row=1, column=0, padx=15, pady=(5, 2), sticky="ew")
         self.progress_bar.set(0.0)
 
-        # Progress stats grid
         self.progress_stats_frame = ctk.CTkFrame(self.action_frame, fg_color="transparent")
         self.progress_stats_frame.grid(row=2, column=0, padx=15, pady=(0, 10), sticky="ew")
         self.progress_stats_frame.grid_columnconfigure(0, weight=1)
@@ -310,7 +318,6 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.speed_eta_label = ctk.CTkLabel(self.progress_stats_frame, text="Speed: -- | ETA: --", text_color="gray")
         self.speed_eta_label.grid(row=0, column=1, sticky="e")
 
-        # Log terminal
         self.log_lbl = ctk.CTkLabel(self.action_frame, text="Live Log Terminal:", font=ctk.CTkFont(weight="bold"))
         self.log_lbl.grid(row=3, column=0, padx=15, pady=(5, 0), sticky="w")
 
@@ -319,16 +326,36 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.log_textbox.configure(state="disabled")
 
     # ----------------------------------------------------
+    # LINK TOOLBAR ACTIONS
+    # ----------------------------------------------------
+    def paste_link(self):
+        try:
+            clipboard_data = self.clipboard_get()
+            self.url_var.set(clipboard_data)
+        except Exception:
+            self.show_log("❌ Error: Clipboard is empty or contains non-text data.")
+
+    def copy_link(self):
+        url = self.url_var.get()
+        if url:
+            self.clipboard_clear()
+            self.clipboard_append(url)
+            self.show_log("📄 Link copied to clipboard!")
+
+    def clear_link(self):
+        self.url_var.set("")
+
+    # ----------------------------------------------------
     # CORE LOGIC & ACTIONS
     # ----------------------------------------------------
     def log_initial_status(self):
         self.show_log("--- YouTube Downloader System Initialized ---")
         if self.ffmpeg_available:
             self.show_log(f"✅ FFmpeg detected at: {self.ffmpeg_path}")
-            self.show_log("✅ Full support for MP3 and Source MKV merging enabled.")
+            self.show_log("✅ Full support for MP3 and Source AVI merging enabled.")
         else:
             self.show_log("❌ WARNING: FFmpeg was not detected on your system!")
-            self.show_log("   • To unlock MKV & MP3 formats, please install FFmpeg.")
+            self.show_log("   • To unlock AVI & MP3 formats, please install FFmpeg.")
             self.show_log("   • Put 'ffmpeg.exe' in the same folder as this script to fix it.")
         self.show_log("--------------------------------------------")
 
@@ -348,18 +375,18 @@ class YouTubeDownloaderApp(ctk.CTk):
         folder = filedialog.askdirectory(initialdir=self.path_var.get())
         if folder:
             self.path_var.set(folder)
-            self.save_config(folder) # Save to config file
+            self.save_config(folder)
 
     # ----------------------------------------------------
     # BUTTON CONTROLS
     # ----------------------------------------------------
     def toggle_pause(self):
-        if self.pause_event.is_set():  # It is running, so we pause it
+        if self.pause_event.is_set():
             self.pause_event.clear()
             self.pause_button.configure(text="▶️ Resume")
             self.show_log("⏸️ Command received: Download paused.")
             self.speed_eta_label.configure(text="Download Paused")
-        else:  # It is paused, so we resume it
+        else:
             self.pause_event.set()
             self.pause_button.configure(text="⏸️ Pause")
             self.show_log("▶️ Command received: Download resumed.")
@@ -367,7 +394,6 @@ class YouTubeDownloaderApp(ctk.CTk):
     def stop_download(self):
         self.show_log("🛑 Command received: Aborting download...")
         self.stop_event.set()
-        # If it's paused, we need to unpause it to let the exception execute
         if not self.pause_event.is_set():
             self.pause_event.set()
         self.stop_button.configure(state="disabled")
@@ -450,22 +476,19 @@ class YouTubeDownloaderApp(ctk.CTk):
             self.show_log(f"❌ Error: The destination path '{save_path}' does not exist.")
             return
 
-        # Explicitly save configuration in case they typed the path manually
         self.save_config(save_path)
 
         quality = self.quality_var.get()
 
-        # HARD BLOCKER: Stop the download before it starts if FFmpeg is missing for MP3/MKV
-        if quality in ["Audio Only (MP3)", "Source Quality (MKV)"] and not self.ffmpeg_available:
+        if quality in ["Audio Only (MP3)", "Source Quality (Highest Res - AVI)"] and not self.ffmpeg_available:
             self.show_log(f"❌ Cannot start download! FFmpeg is missing on your computer.")
-            self.show_log("=== HOW TO FIX THE FORMATTING ERROR ===")
+            self.show_log("=== HOW TO FIX THIS ===")
             self.show_log("1. Download FFmpeg from: https://github.com/BtbN/FFmpeg-Builds/releases (get 'ffmpeg-master-latest-win64-gpl.zip')")
             self.show_log("2. Open the ZIP file, go into the 'bin' folder.")
             self.show_log("3. Drag 'ffmpeg.exe' into the EXACT SAME FOLDER where this Python script is located.")
             self.show_log("4. Restart this app, and the red missing label should turn green.")
             return
 
-        # Prepare UI and states for active download
         self.download_button.configure(state="disabled", text="⏳ Downloading...")
         self.analyze_button.configure(state="disabled")
         
@@ -493,7 +516,6 @@ class YouTubeDownloaderApp(ctk.CTk):
             'noplaylist': not extract_playlist,
         }
         
-        # 10 SECOND DELAY LOGIC
         if extract_playlist:
             ydl_opts['sleep_interval'] = 10 
         
@@ -502,11 +524,10 @@ class YouTubeDownloaderApp(ctk.CTk):
         if progress_hook:
             ydl_opts['progress_hooks'] = [progress_hook]
 
-        # Force feed the direct ffmpeg path to yt-dlp so it doesn't get lost
         if ffmpeg_path:
             ydl_opts['ffmpeg_location'] = ffmpeg_path
 
-        # Quality parsing
+        # ------------------- QUALITY LOGIC -------------------
         if quality == "Audio Only (MP3)":
             ydl_opts['format'] = 'bestaudio/best'
             ydl_opts['postprocessors'] = [{
@@ -515,17 +536,17 @@ class YouTubeDownloaderApp(ctk.CTk):
                 'preferredquality': '192',
             }]
             
-        elif quality == "Source Quality (MKV)":
+        elif quality == "Source Quality (Highest Res - AVI)":
             ydl_opts['format'] = 'bestvideo+bestaudio/best'
-            ydl_opts['merge_output_format'] = 'mkv'
+            ydl_opts['merge_output_format'] = 'avi'
             ydl_opts['postprocessors'] = [{
                 'key': 'FFmpegVideoConvertor',
-                'preferedformat': 'mkv', 
+                'preferedformat': 'avi', 
             }]
             
-        elif quality == "Best Quality (MP4)":
+        elif quality == "Highly Compatible (MP4 - 1080p Max)":
             if ffmpeg_path:
-                ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best'
+                ydl_opts['format'] = 'bestvideo[ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[ext=mp4]/best'
                 ydl_opts['merge_output_format'] = 'mp4'
             else:
                 ydl_opts['format'] = 'best' 
@@ -556,14 +577,11 @@ class YouTubeDownloaderApp(ctk.CTk):
     # PROGRESS CALBACKS & STATUS WRAPPING
     # ----------------------------------------------------
     def _ydl_progress_hook(self, d):
-        # 1. Stop Exception Check
         if self.stop_event.is_set():
             raise ValueError("Download Cancelled by User")
 
-        # 2. Pause Event Check (Blocks Thread)
         if not self.pause_event.is_set():
             self.pause_event.wait()
-            # Double check stop logic right after waking up from a pause
             if self.stop_event.is_set():
                 raise ValueError("Download Cancelled by User")
 
@@ -594,7 +612,6 @@ class YouTubeDownloaderApp(ctk.CTk):
             self.after(0, self._on_download_part_finished, d.get('filename', 'file'))
 
     def _on_download_progress(self, percentage, speed_str, eta_str):
-        # Prevent UI updates from overriding the "paused" text randomly
         if self.pause_event.is_set() and not self.stop_event.is_set():
             self.progress_bar.set(percentage)
             self.percentage_label.configure(text=f"{percentage * 100:.1f}%")
@@ -617,7 +634,14 @@ class YouTubeDownloaderApp(ctk.CTk):
         
         self._reset_buttons()
         
+        # AUTO CLEAN FUNCTIONALITY
+        self.clear_link()
+        self.video_title_val.configure(text="None (Enter a URL and click Analyze)", text_color="gray")
+        self.channel_val.configure(text="--", text_color="gray")
+        self.duration_val.configure(text="--", text_color="gray")
+        
         self.show_log("🎉 Success! Media download & conversion completed correctly!")
+        self.show_log("🧹 URL field auto-cleaned for your next link.")
         self.show_log("--------------------------------------------")
 
     def _on_download_error(self, error_message):
