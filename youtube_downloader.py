@@ -54,7 +54,7 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         # Main variables
         self.url_var = ctk.StringVar()
-        self.quality_var = ctk.StringVar(value="Highest Quality (MP4)")
+        self.quality_var = ctk.StringVar(value="Highly Compatible (MP4 - 1080p Max)")
         
         # Determine default download path via config or fallback
         self.path_var = ctk.StringVar(value=self.load_config())
@@ -171,6 +171,16 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.clear_btn = ctk.CTkButton(self.url_toolbar_frame, text="❌ Clear", width=60, command=self.clear_link)
         self.clear_btn.grid(row=0, column=3, padx=(0, 0))
 
+        # Auto Clear Switch
+        self.autoclear_var = ctk.BooleanVar(value=True)
+        self.autoclear_switch = ctk.CTkSwitch(
+            self.input_frame,
+            text="Auto-clear URL after successful download",
+            variable=self.autoclear_var,
+            font=ctk.CTkFont(size=12, weight="bold")
+        )
+        self.autoclear_switch.grid(row=2, column=0, columnspan=2, padx=15, pady=(0, 10), sticky="w")
+
         # Analyze Button
         self.analyze_button = ctk.CTkButton(
             self.input_frame, 
@@ -179,7 +189,7 @@ class YouTubeDownloaderApp(ctk.CTk):
             command=self.start_fetch_info,
             font=ctk.CTkFont(weight="bold")
         )
-        self.analyze_button.grid(row=2, column=0, columnspan=2, padx=15, pady=(0, 15), sticky="e")
+        self.analyze_button.grid(row=3, column=0, columnspan=2, padx=15, pady=(0, 15), sticky="e")
 
         # ----------------------------------------------------
         # 3. VIDEO METADATA CARD
@@ -222,13 +232,13 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.ffmpeg_status_lbl = ctk.CTkLabel(self.settings_frame, text=ffmpeg_status, text_color=ffmpeg_color, font=ctk.CTkFont(weight="bold", size=12))
         self.ffmpeg_status_lbl.grid(row=0, column=1, columnspan=2, padx=15, pady=(10, 5), sticky="e")
 
-        # Quality dropdown (NOW ONLY MP4 & MP3)
+        # Quality dropdown (NOW ONLY MP4 - 1080p & MP3)
         self.quality_lbl = ctk.CTkLabel(self.settings_frame, text="Preferred Quality:", font=ctk.CTkFont(weight="bold"))
         self.quality_lbl.grid(row=1, column=0, padx=(15, 10), pady=10, sticky="w")
 
         self.quality_menu = ctk.CTkOptionMenu(
             self.settings_frame,
-            values=["Highest Quality (MP4)", "Audio Only (MP3)"],
+            values=["Highly Compatible (MP4 - 1080p Max)", "Audio Only (MP3)"],
             variable=self.quality_var
         )
         self.quality_menu.grid(row=1, column=1, columnspan=2, padx=(0, 15), pady=10, sticky="ew")
@@ -536,12 +546,12 @@ class YouTubeDownloaderApp(ctk.CTk):
                 'preferredquality': '192',
             }]
             
-        elif quality == "Highest Quality (MP4)":
+        elif quality == "Highly Compatible (MP4 - 1080p Max)":
             if ffmpeg_path:
-                ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best'
+                ydl_opts['format'] = 'bestvideo[ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[ext=mp4]/best'
                 ydl_opts['merge_output_format'] = 'mp4'
             else:
-                ydl_opts['format'] = 'best'
+                ydl_opts['format'] = 'best' 
                 
         return ydl_opts
 
@@ -625,15 +635,16 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.speed_eta_label.configure(text="Finished!")
         
         self._reset_buttons()
-        
-        # AUTO CLEAN FUNCTIONALITY
-        self.clear_link()
-        self.video_title_val.configure(text="None (Enter a URL and click Analyze)", text_color="gray")
-        self.channel_val.configure(text="--", text_color="gray")
-        self.duration_val.configure(text="--", text_color="gray")
-        
         self.show_log("🎉 Success! Media download & conversion completed correctly!")
-        self.show_log("🧹 URL field auto-cleaned for your next link.")
+        
+        # AUTO CLEAN FUNCTIONALITY (Checking the switch)
+        if self.autoclear_var.get():
+            self.clear_link()
+            self.video_title_val.configure(text="None (Enter a URL and click Analyze)", text_color="gray")
+            self.channel_val.configure(text="--", text_color="gray")
+            self.duration_val.configure(text="--", text_color="gray")
+            self.show_log("🧹 URL field auto-cleaned for your next link.")
+            
         self.show_log("--------------------------------------------")
 
     def _on_download_error(self, error_message):
