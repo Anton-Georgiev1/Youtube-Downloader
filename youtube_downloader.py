@@ -42,7 +42,7 @@ class YouTubeDownloaderApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        # Window configuration
+        # Window configuration (Height adjusted to 950)
         self.title("⬇️ YouTube Downloader")
         self.geometry("750x950")
         self.minsize(650, 950)
@@ -54,7 +54,7 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         # Main variables
         self.url_var = ctk.StringVar()
-        self.quality_var = ctk.StringVar(value="Source Quality (Highest Res - AVI)")
+        self.quality_var = ctk.StringVar(value="Highest Quality (MP4)")
         
         # Determine default download path via config or fallback
         self.path_var = ctk.StringVar(value=self.load_config())
@@ -216,19 +216,19 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.settings_title = ctk.CTkLabel(self.settings_frame, text="Download Configuration", font=ctk.CTkFont(weight="bold", size=14))
         self.settings_title.grid(row=0, column=0, padx=15, pady=(10, 5), sticky="w")
 
-        ffmpeg_status = "✅ FFmpeg: Active (AVI/MP3 Enabled)" if self.ffmpeg_available else "❌ FFmpeg: Missing (MP3/AVI Disabled)"
+        ffmpeg_status = "✅ FFmpeg: Active (MP4/MP3 Enabled)" if self.ffmpeg_available else "❌ FFmpeg: Missing (MP3/MP4 Merging Disabled)"
         ffmpeg_color = "green" if self.ffmpeg_available else "red"
         
         self.ffmpeg_status_lbl = ctk.CTkLabel(self.settings_frame, text=ffmpeg_status, text_color=ffmpeg_color, font=ctk.CTkFont(weight="bold", size=12))
         self.ffmpeg_status_lbl.grid(row=0, column=1, columnspan=2, padx=15, pady=(10, 5), sticky="e")
 
-        # Quality dropdown (NOW USING AVI)
+        # Quality dropdown (NOW ONLY MP4 & MP3)
         self.quality_lbl = ctk.CTkLabel(self.settings_frame, text="Preferred Quality:", font=ctk.CTkFont(weight="bold"))
         self.quality_lbl.grid(row=1, column=0, padx=(15, 10), pady=10, sticky="w")
 
         self.quality_menu = ctk.CTkOptionMenu(
             self.settings_frame,
-            values=["Source Quality (Highest Res - AVI)", "Highly Compatible (MP4 - 1080p Max)", "Audio Only (MP3)"],
+            values=["Highest Quality (MP4)", "Audio Only (MP3)"],
             variable=self.quality_var
         )
         self.quality_menu.grid(row=1, column=1, columnspan=2, padx=(0, 15), pady=10, sticky="ew")
@@ -352,10 +352,10 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.show_log("--- YouTube Downloader System Initialized ---")
         if self.ffmpeg_available:
             self.show_log(f"✅ FFmpeg detected at: {self.ffmpeg_path}")
-            self.show_log("✅ Full support for MP3 and Source AVI merging enabled.")
+            self.show_log("✅ Full support for MP3 and MP4 merging enabled.")
         else:
             self.show_log("❌ WARNING: FFmpeg was not detected on your system!")
-            self.show_log("   • To unlock AVI & MP3 formats, please install FFmpeg.")
+            self.show_log("   • To unlock high-resolution MP4 & MP3 formats, please install FFmpeg.")
             self.show_log("   • Put 'ffmpeg.exe' in the same folder as this script to fix it.")
         self.show_log("--------------------------------------------")
 
@@ -480,7 +480,7 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         quality = self.quality_var.get()
 
-        if quality in ["Audio Only (MP3)", "Source Quality (Highest Res - AVI)"] and not self.ffmpeg_available:
+        if not self.ffmpeg_available:
             self.show_log(f"❌ Cannot start download! FFmpeg is missing on your computer.")
             self.show_log("=== HOW TO FIX THIS ===")
             self.show_log("1. Download FFmpeg from: https://github.com/BtbN/FFmpeg-Builds/releases (get 'ffmpeg-master-latest-win64-gpl.zip')")
@@ -536,20 +536,12 @@ class YouTubeDownloaderApp(ctk.CTk):
                 'preferredquality': '192',
             }]
             
-        elif quality == "Source Quality (Highest Res - AVI)":
-            ydl_opts['format'] = 'bestvideo+bestaudio/best'
-            ydl_opts['merge_output_format'] = 'avi'
-            ydl_opts['postprocessors'] = [{
-                'key': 'FFmpegVideoConvertor',
-                'preferedformat': 'avi', 
-            }]
-            
-        elif quality == "Highly Compatible (MP4 - 1080p Max)":
+        elif quality == "Highest Quality (MP4)":
             if ffmpeg_path:
-                ydl_opts['format'] = 'bestvideo[ext=mp4][vcodec^=avc]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+                ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best'
                 ydl_opts['merge_output_format'] = 'mp4'
             else:
-                ydl_opts['format'] = 'best' 
+                ydl_opts['format'] = 'best'
                 
         return ydl_opts
 
