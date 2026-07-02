@@ -3,6 +3,7 @@ import sys
 import shutil
 import threading
 import platform
+import json
 from pathlib import Path
 import customtkinter as ctk
 import tkinter as tk
@@ -12,6 +13,8 @@ import yt_dlp
 # Set appearance and default color theme
 ctk.set_appearance_mode("System")
 ctk.set_default_color_theme("blue")
+
+CONFIG_FILE = "ytdl_config.json"
 
 
 class YDLLogger:
@@ -41,18 +44,20 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         # Window configuration
         self.title("⬇️ YouTube Downloader")
-        self.geometry("750x800")
-        self.minsize(650, 900)
+        self.geometry("750x850")
+        self.minsize(650, 850)
+
+        # Threading Events for Pause and Stop mechanics
+        self.pause_event = threading.Event()
+        self.pause_event.set()  # Set to True (Running state) by default
+        self.stop_event = threading.Event()
 
         # Main variables
         self.url_var = ctk.StringVar()
         self.quality_var = ctk.StringVar(value="Source Quality (MKV)")
         
-        # Determine default download path (Downloads folder or current directory)
-        downloads_path = str(Path.home() / "Downloads")
-        if not os.path.exists(downloads_path):
-            downloads_path = os.getcwd()
-        self.path_var = ctk.StringVar(value=downloads_path)
+        # Determine default download path via config or fallback
+        self.path_var = ctk.StringVar(value=self.load_config())
 
         # Locate FFmpeg intelligently
         self.ffmpeg_path = self.get_ffmpeg_path()
@@ -63,6 +68,32 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         # Log initial environment info
         self.log_initial_status()
+
+    # ----------------------------------------------------
+    # CONFIGURATION HANDLING
+    # ----------------------------------------------------
+    def load_config(self):
+        """Load the last used download directory from the configuration file."""
+        default_path = str(Path.home() / "Downloads")
+        if not os.path.exists(default_path):
+            default_path = os.getcwd()
+            
+        try:
+            if os.path.exists(CONFIG_FILE):
+                with open(CONFIG_FILE, "r") as f:
+                    data = json.load(f)
+                    return data.get("download_path", default_path)
+        except Exception:
+            pass
+        return default_path
+
+    def save_config(self, path):
+        """Save the currently selected download directory."""
+        try:
+            with open(CONFIG_FILE, "w") as f:
+                json.dump({"download_path": path}, f)
+        except Exception:
+            pass
 
     def get_ffmpeg_path(self):
         """Intelligently locate FFmpeg, even if it's placed right next to the script."""
@@ -87,8 +118,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         return None
 
     def setup_ui(self):
-        # Configure layout weights for responsiveness
-        self.grid_rowconfigure(4, weight=1)  # Log/console box expands
+        self.grid_rowconfigure(4, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
         # ----------------------------------------------------
@@ -181,7 +211,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.ffmpeg_status_lbl = ctk.CTkLabel(self.settings_frame, text=ffmpeg_status, text_color=ffmpeg_color, font=ctk.CTkFont(weight="bold", size=12))
         self.ffmpeg_status_lbl.grid(row=0, column=1, columnspan=2, padx=15, pady=(10, 5), sticky="e")
 
-        # Quality dropdown - NOW CONTAINS ONLY THE THREE REQUESTED OPTIONS
+        # Quality dropdown
         self.quality_lbl = ctk.CTkLabel(self.settings_frame, text="Preferred Quality:", font=ctk.CTkFont(weight="bold"))
         self.quality_lbl.grid(row=1, column=0, padx=(15, 10), pady=10, sticky="w")
 
@@ -214,7 +244,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.playlist_var = ctk.BooleanVar(value=True)
         self.playlist_switch = ctk.CTkSwitch(
             self.switches_frame,
-            text="Download entire playlist",
+            text="Download entire playlist (Enables 10s delay to prevent ban)",
             variable=self.playlist_var,
             font=ctk.CTkFont(size=12, weight="bold")
         )
@@ -228,15 +258,41 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.action_frame.grid_columnconfigure(0, weight=1)
         self.action_frame.grid_rowconfigure(4, weight=1)
 
-        # Download Button
+        # BUTTON CONTROLS FRAME (Start, Pause, Stop)
+        self.controls_frame = ctk.CTkFrame(self.action_frame, fg_color="transparent")
+        self.controls_frame.grid(row=0, column=0, padx=15, pady=15, sticky="ew")
+        self.controls_frame.grid_columnconfigure((0, 1, 2), weight=1)
+
         self.download_button = ctk.CTkButton(
-            self.action_frame, 
+            self.controls_frame, 
             text="⚡ Start Download", 
             height=40, 
-            font=ctk.CTkFont(size=16, weight="bold"),
+            font=ctk.CTkFont(size=14, weight="bold"),
             command=self.start_download
         )
-        self.download_button.grid(row=0, column=0, padx=15, pady=15, sticky="ew")
+        self.download_button.grid(row=0, column=0, padx=(0, 5), sticky="ew")
+
+        self.pause_button = ctk.CTkButton(
+            self.controls_frame, 
+            text="⏸️ Pause", 
+            height=40, 
+            font=ctk.CTkFont(size=14, weight="bold"),
+            state="disabled",
+            command=self.toggle_pause
+        )
+        self.pause_button.grid(row=0, column=1, padx=(5, 5), sticky="ew")
+
+        self.stop_button = ctk.CTkButton(
+            self.controls_frame, 
+            text="⏹️ Stop", 
+            height=40, 
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color="#c93434",
+            hover_color="#9e2a2a",
+            state="disabled",
+            command=self.stop_download
+        )
+        self.stop_button.grid(row=0, column=2, padx=(5, 0), sticky="ew")
 
         # Progress bar
         self.progress_bar = ctk.CTkProgressBar(self.action_frame)
@@ -292,6 +348,30 @@ class YouTubeDownloaderApp(ctk.CTk):
         folder = filedialog.askdirectory(initialdir=self.path_var.get())
         if folder:
             self.path_var.set(folder)
+            self.save_config(folder) # Save to config file
+
+    # ----------------------------------------------------
+    # BUTTON CONTROLS
+    # ----------------------------------------------------
+    def toggle_pause(self):
+        if self.pause_event.is_set():  # It is running, so we pause it
+            self.pause_event.clear()
+            self.pause_button.configure(text="▶️ Resume")
+            self.show_log("⏸️ Command received: Download paused.")
+            self.speed_eta_label.configure(text="Download Paused")
+        else:  # It is paused, so we resume it
+            self.pause_event.set()
+            self.pause_button.configure(text="⏸️ Pause")
+            self.show_log("▶️ Command received: Download resumed.")
+
+    def stop_download(self):
+        self.show_log("🛑 Command received: Aborting download...")
+        self.stop_event.set()
+        # If it's paused, we need to unpause it to let the exception execute
+        if not self.pause_event.is_set():
+            self.pause_event.set()
+        self.stop_button.configure(state="disabled")
+        self.pause_button.configure(state="disabled")
 
     # ----------------------------------------------------
     # INFO FETCHING FLOW
@@ -370,6 +450,9 @@ class YouTubeDownloaderApp(ctk.CTk):
             self.show_log(f"❌ Error: The destination path '{save_path}' does not exist.")
             return
 
+        # Explicitly save configuration in case they typed the path manually
+        self.save_config(save_path)
+
         quality = self.quality_var.get()
 
         # HARD BLOCKER: Stop the download before it starts if FFmpeg is missing for MP3/MKV
@@ -382,14 +465,24 @@ class YouTubeDownloaderApp(ctk.CTk):
             self.show_log("4. Restart this app, and the red missing label should turn green.")
             return
 
+        # Prepare UI and states for active download
         self.download_button.configure(state="disabled", text="⏳ Downloading...")
         self.analyze_button.configure(state="disabled")
+        
+        self.pause_button.configure(state="normal", text="⏸️ Pause")
+        self.stop_button.configure(state="normal")
+        self.stop_event.clear()
+        self.pause_event.set()
+
         self.progress_bar.set(0.0)
         self.percentage_label.configure(text="0.0%")
         self.speed_eta_label.configure(text="Connecting to download streams...")
 
         self.show_log(f"🚀 Initializing download...")
         self.show_log(f"   • Target Format: {quality}")
+        
+        if self.playlist_var.get():
+            self.show_log("⏳ Playlist switch enabled: A 10-second delay will be added between videos to avoid bans.")
 
         thread = threading.Thread(target=self._download_thread, args=(url, quality, save_path), daemon=True)
         thread.start()
@@ -400,6 +493,10 @@ class YouTubeDownloaderApp(ctk.CTk):
             'noplaylist': not extract_playlist,
         }
         
+        # 10 SECOND DELAY LOGIC
+        if extract_playlist:
+            ydl_opts['sleep_interval'] = 10 
+        
         if logger:
             ydl_opts['logger'] = logger
         if progress_hook:
@@ -409,7 +506,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         if ffmpeg_path:
             ydl_opts['ffmpeg_location'] = ffmpeg_path
 
-        # Simplified Logic for the exactly 3 allowed options
+        # Quality parsing
         if quality == "Audio Only (MP3)":
             ydl_opts['format'] = 'bestaudio/best'
             ydl_opts['postprocessors'] = [{
@@ -431,7 +528,6 @@ class YouTubeDownloaderApp(ctk.CTk):
                 ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best'
                 ydl_opts['merge_output_format'] = 'mp4'
             else:
-                # If they select MP4 but don't have FFmpeg, yt-dlp will pull a pre-merged format automatically
                 ydl_opts['format'] = 'best' 
                 
         return ydl_opts
@@ -460,6 +556,17 @@ class YouTubeDownloaderApp(ctk.CTk):
     # PROGRESS CALBACKS & STATUS WRAPPING
     # ----------------------------------------------------
     def _ydl_progress_hook(self, d):
+        # 1. Stop Exception Check
+        if self.stop_event.is_set():
+            raise ValueError("Download Cancelled by User")
+
+        # 2. Pause Event Check (Blocks Thread)
+        if not self.pause_event.is_set():
+            self.pause_event.wait()
+            # Double check stop logic right after waking up from a pause
+            if self.stop_event.is_set():
+                raise ValueError("Download Cancelled by User")
+
         status = d.get('status')
         if status == 'downloading':
             downloaded = d.get('downloaded_bytes', 0)
@@ -487,21 +594,28 @@ class YouTubeDownloaderApp(ctk.CTk):
             self.after(0, self._on_download_part_finished, d.get('filename', 'file'))
 
     def _on_download_progress(self, percentage, speed_str, eta_str):
-        self.progress_bar.set(percentage)
-        self.percentage_label.configure(text=f"{percentage * 100:.1f}%")
-        self.speed_eta_label.configure(text=f"Speed: {speed_str} | ETA: {eta_str}")
+        # Prevent UI updates from overriding the "paused" text randomly
+        if self.pause_event.is_set() and not self.stop_event.is_set():
+            self.progress_bar.set(percentage)
+            self.percentage_label.configure(text=f"{percentage * 100:.1f}%")
+            self.speed_eta_label.configure(text=f"Speed: {speed_str} | ETA: {eta_str}")
 
     def _on_download_part_finished(self, filename):
         name = os.path.basename(filename)
         self.show_log(f"📦 Completed downloading part: {name}")
+
+    def _reset_buttons(self):
+        self.download_button.configure(state="normal", text="⚡ Start Download")
+        self.analyze_button.configure(state="normal")
+        self.pause_button.configure(state="disabled", text="⏸️ Pause")
+        self.stop_button.configure(state="disabled")
 
     def _on_download_success(self):
         self.progress_bar.set(1.0)
         self.percentage_label.configure(text="100.0%")
         self.speed_eta_label.configure(text="Finished!")
         
-        self.download_button.configure(state="normal", text="⚡ Start Download")
-        self.analyze_button.configure(state="normal")
+        self._reset_buttons()
         
         self.show_log("🎉 Success! Media download & conversion completed correctly!")
         self.show_log("--------------------------------------------")
@@ -509,12 +623,15 @@ class YouTubeDownloaderApp(ctk.CTk):
     def _on_download_error(self, error_message):
         self.progress_bar.set(0.0)
         self.percentage_label.configure(text="0.0%")
-        self.speed_eta_label.configure(text="Download failed.")
         
-        self.download_button.configure(state="normal", text="⚡ Start Download")
-        self.analyze_button.configure(state="normal")
-        
-        self.show_log(f"❌ Download Error: {error_message}")
+        if "Download Cancelled by User" in error_message:
+            self.speed_eta_label.configure(text="Cancelled.")
+            self.show_log("🛑 The download was successfully cancelled and deleted.")
+        else:
+            self.speed_eta_label.configure(text="Download failed.")
+            self.show_log(f"❌ Download Error: {error_message}")
+            
+        self._reset_buttons()
         self.show_log("--------------------------------------------")
 
 
