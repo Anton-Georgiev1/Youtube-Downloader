@@ -42,7 +42,7 @@ class YouTubeDownloaderApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        # Window configuration (Height adjusted to 950)
+        # Window configuration
         self.title("⬇️ YouTube Downloader")
         self.geometry("750x950")
         self.minsize(650, 950)
@@ -52,12 +52,15 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.pause_event.set()  # Set to True (Running state) by default
         self.stop_event = threading.Event()
 
-        # Main variables
+        # Load saved configurations
+        config = self.load_config()
+
+        # Main variables (Initialized with saved values or defaults)
         self.url_var = ctk.StringVar()
-        self.quality_var = ctk.StringVar(value="Highly Compatible (MP4 - 1080p Max)")
-        
-        # Determine default download path via config or fallback
-        self.path_var = ctk.StringVar(value=self.load_config())
+        self.quality_var = ctk.StringVar(value=config.get("quality", "Highly Compatible (MP4 - 1080p Max)"))
+        self.path_var = ctk.StringVar(value=config.get("download_path"))
+        self.autoclear_var = ctk.BooleanVar(value=config.get("autoclear", True))
+        self.playlist_var = ctk.BooleanVar(value=config.get("playlist", True))
 
         # Locate FFmpeg intelligently
         self.ffmpeg_path = self.get_ffmpeg_path()
@@ -73,25 +76,38 @@ class YouTubeDownloaderApp(ctk.CTk):
     # CONFIGURATION HANDLING
     # ----------------------------------------------------
     def load_config(self):
-        """Load the last used download directory from the configuration file."""
+        """Load all saved settings from the configuration file."""
         default_path = str(Path.home() / "Downloads")
         if not os.path.exists(default_path):
             default_path = os.getcwd()
             
+        defaults = {
+            "download_path": default_path,
+            "quality": "Highly Compatible (MP4 - 1080p Max)",
+            "autoclear": True,
+            "playlist": True
+        }
+
         try:
             if os.path.exists(CONFIG_FILE):
                 with open(CONFIG_FILE, "r") as f:
                     data = json.load(f)
-                    return data.get("download_path", default_path)
+                    defaults.update(data)  # Overwrite defaults with saved data
         except Exception:
             pass
-        return default_path
+        return defaults
 
-    def save_config(self, path):
-        """Save the currently selected download directory."""
+    def save_config(self, *args):
+        """Save the current state of all settings."""
         try:
+            data = {
+                "download_path": self.path_var.get(),
+                "quality": self.quality_var.get(),
+                "autoclear": self.autoclear_var.get(),
+                "playlist": self.playlist_var.get()
+            }
             with open(CONFIG_FILE, "w") as f:
-                json.dump({"download_path": path}, f)
+                json.dump(data, f)
         except Exception:
             pass
 
@@ -172,11 +188,11 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.clear_btn.grid(row=0, column=3, padx=(0, 0))
 
         # Auto Clear Switch
-        self.autoclear_var = ctk.BooleanVar(value=True)
         self.autoclear_switch = ctk.CTkSwitch(
             self.input_frame,
             text="Auto-clear URL after successful download",
             variable=self.autoclear_var,
+            command=self.save_config,  # Saves state automatically when clicked
             font=ctk.CTkFont(size=12, weight="bold")
         )
         self.autoclear_switch.grid(row=2, column=0, columnspan=2, padx=15, pady=(0, 10), sticky="w")
@@ -239,7 +255,8 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.quality_menu = ctk.CTkOptionMenu(
             self.settings_frame,
             values=["Highly Compatible (MP4 - 1080p Max)", "Audio Only (MP3)"],
-            variable=self.quality_var
+            variable=self.quality_var,
+            command=self.save_config  # Saves state automatically when clicked
         )
         self.quality_menu.grid(row=1, column=1, columnspan=2, padx=(0, 15), pady=10, sticky="ew")
 
@@ -262,11 +279,11 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.switches_frame = ctk.CTkFrame(self.settings_frame, fg_color="transparent")
         self.switches_frame.grid(row=3, column=0, columnspan=3, padx=15, pady=(5, 15), sticky="w")
 
-        self.playlist_var = ctk.BooleanVar(value=True)
         self.playlist_switch = ctk.CTkSwitch(
             self.switches_frame,
             text="Download entire playlist (Enables 10s delay to prevent ban)",
             variable=self.playlist_var,
+            command=self.save_config,  # Saves state automatically when clicked
             font=ctk.CTkFont(size=12, weight="bold")
         )
         self.playlist_switch.grid(row=0, column=0, padx=(0, 20), pady=5, sticky="w")
@@ -385,7 +402,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         folder = filedialog.askdirectory(initialdir=self.path_var.get())
         if folder:
             self.path_var.set(folder)
-            self.save_config(folder)
+            self.save_config()  # Save folder change immediately
 
     # ----------------------------------------------------
     # BUTTON CONTROLS
@@ -486,7 +503,8 @@ class YouTubeDownloaderApp(ctk.CTk):
             self.show_log(f"❌ Error: The destination path '{save_path}' does not exist.")
             return
 
-        self.save_config(save_path)
+        # Explicitly save configs in case the user manually typed a new path into the Entry box
+        self.save_config()
 
         quality = self.quality_var.get()
 
