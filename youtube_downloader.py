@@ -172,11 +172,11 @@ class YouTubeDownloaderApp(ctk.CTk):
         if self.theme_var.get() == "Light":
             self.theme_var.set("Dark")
             ctk.set_appearance_mode("Dark")
-            self.theme_btn.configure(text="🌙 Dark")
         else:
             self.theme_var.set("Light")
             ctk.set_appearance_mode("Light")
-            self.theme_btn.configure(text="🌞 Light")
+        
+        self.update_ui_language()  # Automatically update theme button text in active language
         self.save_config()
         self.show_log(f"🎨 Theme changed to: {self.theme_var.get()}")
 
@@ -220,9 +220,8 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         # Apply reset UI styles
         ctk.set_appearance_mode("Light")
-        self.theme_btn.configure(text="🌞 Light")
         self.update_log_visibility()
-        self.update_ui_language()
+        self.update_ui_language()  # Text is updated here programmatically
         self.save_config()
         self.show_log("🔄 Configuration reset to default settings.")
 
@@ -254,6 +253,12 @@ class YouTubeDownloaderApp(ctk.CTk):
         # Main Header UI assets
         self.title_label.configure(text=t["title"])
         self.subtitle_label.configure(text=t["subtitle"])
+
+        # Theme toggle update (fetches theme status dynamically)
+        if self.theme_var.get() == "Light":
+            self.theme_btn.configure(text=t.get("theme_light", "🌞 Light"))
+        else:
+            self.theme_btn.configure(text=t.get("theme_dark", "🌙 Dark"))
 
         # Input Frame elements
         self.url_label.configure(text=t["url_label"])
@@ -345,11 +350,9 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.title_label.grid(row=0, column=0, padx=20, pady=(15, 5), sticky="w")
 
         # Theme Toggle Button (Row 0, Column 1)
-        current_theme = self.theme_var.get()
-        btn_text = "🌞 Light" if current_theme == "Light" else "🌙 Dark"
         self.theme_btn = ctk.CTkButton(
             self.header_frame,
-            text=btn_text,
+            text="",  # Initialized as empty; update_ui_language() handles writing correct translation
             width=95,
             height=32,
             command=self.toggle_theme,
