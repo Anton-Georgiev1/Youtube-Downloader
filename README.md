@@ -69,19 +69,19 @@ We highly recommend setting up a virtual environment to keep your global Python 
 
 > [!NOTE]
 > # Clone or navigate to the project directory
-> ```bash
+```bash
 > cd "Youtube Downloader"
-> ```
+```
 > # Create a virtual environment
-> ```bash
-> python -m venv .venv
-> ```
+ ```bash
+ python -m venv .venv
+ ```
 > # Activate the virtual environment:
 > # On Windows:
-> ```bash
-> .venv\Scripts\activate
-> ```
-# On macOS/Linux:
+```bash
+.venv\Scripts\activate
+ ```
+> # On macOS/Linux:
 ```bash
 source .venv/bin/activate
 ```
