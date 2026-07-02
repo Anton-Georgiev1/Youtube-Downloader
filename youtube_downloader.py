@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import threading
+import platform
 from pathlib import Path
 import customtkinter as ctk
 import tkinter as tk
@@ -39,13 +40,13 @@ class YouTubeDownloaderApp(ctk.CTk):
         super().__init__()
 
         # Window configuration
-        self.title("⬇️ YouTube Media Downloader")
+        self.title("⬇️ YouTube Downloader")
         self.geometry("750x800")
-        self.minsize(650, 700)
+        self.minsize(650, 900)
 
         # Main variables
         self.url_var = ctk.StringVar()
-        self.quality_var = ctk.StringVar(value="Best Quality")
+        self.quality_var = ctk.StringVar(value="Source Quality (MKV)")
         
         # Determine default download path (Downloads folder or current directory)
         downloads_path = str(Path.home() / "Downloads")
@@ -53,14 +54,37 @@ class YouTubeDownloaderApp(ctk.CTk):
             downloads_path = os.getcwd()
         self.path_var = ctk.StringVar(value=downloads_path)
 
-        # Check for FFmpeg
-        self.ffmpeg_available = shutil.which("ffmpeg") is not None
+        # Locate FFmpeg intelligently
+        self.ffmpeg_path = self.get_ffmpeg_path()
+        self.ffmpeg_available = self.ffmpeg_path is not None
 
         # Build GUI
         self.setup_ui()
 
         # Log initial environment info
         self.log_initial_status()
+
+    def get_ffmpeg_path(self):
+        """Intelligently locate FFmpeg, even if it's placed right next to the script."""
+        exe_name = "ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg"
+        
+        # 1. Check the exact folder where this python script is located
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        local_path = os.path.join(script_dir, exe_name)
+        if os.path.exists(local_path):
+            return local_path
+            
+        # 2. Check the current working directory
+        cwd_path = os.path.join(os.getcwd(), exe_name)
+        if os.path.exists(cwd_path):
+            return cwd_path
+            
+        # 3. Check System PATH environments
+        sys_path = shutil.which("ffmpeg")
+        if sys_path:
+            return sys_path
+            
+        return None
 
     def setup_ui(self):
         # Configure layout weights for responsiveness
@@ -76,7 +100,7 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         self.title_label = ctk.CTkLabel(
             self.header_frame, 
-            text="⬇️ YouTube Media Downloader", 
+            text="⬇️ YouTube Downloader", 
             font=ctk.CTkFont(size=24, weight="bold")
         )
         self.title_label.grid(row=0, column=0, padx=20, pady=(15, 5), sticky="w")
@@ -102,7 +126,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.url_entry = ctk.CTkEntry(
             self.input_frame, 
             textvariable=self.url_var, 
-            placeholder_text="https://www.youtube.com/watch?v=..."
+            placeholder_text="..."
         )
         self.url_entry.grid(row=1, column=0, padx=(15, 10), pady=(0, 15), sticky="ew")
 
@@ -116,7 +140,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.analyze_button.grid(row=1, column=1, padx=(0, 15), pady=(0, 15), sticky="e")
 
         # ----------------------------------------------------
-        # 3. VIDEO METADATA CARD (Hidden/Blank Initially)
+        # 3. VIDEO METADATA CARD
         # ----------------------------------------------------
         self.meta_frame = ctk.CTkFrame(self)
         self.meta_frame.grid(row=2, column=0, padx=20, pady=10, sticky="ew")
@@ -148,15 +172,22 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.settings_frame.grid_columnconfigure(1, weight=1)
 
         self.settings_title = ctk.CTkLabel(self.settings_frame, text="Download Configuration", font=ctk.CTkFont(weight="bold", size=14))
-        self.settings_title.grid(row=0, column=0, columnspan=3, padx=15, pady=(10, 5), sticky="w")
+        self.settings_title.grid(row=0, column=0, padx=15, pady=(10, 5), sticky="w")
 
-        # Quality dropdown
+        # DYNAMIC FFMPEG STATUS INDICATOR
+        ffmpeg_status = "✅ FFmpeg: Active (MKV/MP3 Enabled)" if self.ffmpeg_available else "❌ FFmpeg: Missing (MP3/MKV Disabled)"
+        ffmpeg_color = "green" if self.ffmpeg_available else "red"
+        
+        self.ffmpeg_status_lbl = ctk.CTkLabel(self.settings_frame, text=ffmpeg_status, text_color=ffmpeg_color, font=ctk.CTkFont(weight="bold", size=12))
+        self.ffmpeg_status_lbl.grid(row=0, column=1, columnspan=2, padx=15, pady=(10, 5), sticky="e")
+
+        # Quality dropdown - NOW CONTAINS ONLY THE THREE REQUESTED OPTIONS
         self.quality_lbl = ctk.CTkLabel(self.settings_frame, text="Preferred Quality:", font=ctk.CTkFont(weight="bold"))
         self.quality_lbl.grid(row=1, column=0, padx=(15, 10), pady=10, sticky="w")
 
         self.quality_menu = ctk.CTkOptionMenu(
             self.settings_frame,
-            values=["Best Quality", "1080p", "720p", "480p", "360p", "Audio Only (MP3)"],
+            values=["Source Quality (MKV)", "Best Quality (MP4)", "Audio Only (MP3)"],
             variable=self.quality_var
         )
         self.quality_menu.grid(row=1, column=1, columnspan=2, padx=(0, 15), pady=10, sticky="ew")
@@ -176,27 +207,18 @@ class YouTubeDownloaderApp(ctk.CTk):
         )
         self.browse_btn.grid(row=2, column=2, padx=(0, 15), pady=(0, 15), sticky="e")
 
-        # Switches for Playlist and Anti-Detection Delay
+        # Playlist Switch
         self.switches_frame = ctk.CTkFrame(self.settings_frame, fg_color="transparent")
         self.switches_frame.grid(row=3, column=0, columnspan=3, padx=15, pady=(5, 15), sticky="w")
 
         self.playlist_var = ctk.BooleanVar(value=True)
         self.playlist_switch = ctk.CTkSwitch(
             self.switches_frame,
-            text="Download entire playlist / channel",
+            text="Download entire playlist",
             variable=self.playlist_var,
             font=ctk.CTkFont(size=12, weight="bold")
         )
         self.playlist_switch.grid(row=0, column=0, padx=(0, 20), pady=5, sticky="w")
-
-        self.delay_var = ctk.BooleanVar(value=True)
-        self.delay_switch = ctk.CTkSwitch(
-            self.switches_frame,
-            text="Enable anti-detection delay (10s)",
-            variable=self.delay_var,
-            font=ctk.CTkFont(size=12, weight="bold")
-        )
-        self.delay_switch.grid(row=0, column=1, padx=0, pady=5, sticky="w")
 
         # ----------------------------------------------------
         # 5. DOWNLOAD ACTIONS & LIVE PROGRESS
@@ -204,7 +226,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.action_frame = ctk.CTkFrame(self)
         self.action_frame.grid(row=4, column=0, padx=20, pady=10, sticky="nsew")
         self.action_frame.grid_columnconfigure(0, weight=1)
-        self.action_frame.grid_rowconfigure(4, weight=1)  # log textbox expands inside this frame
+        self.action_frame.grid_rowconfigure(4, weight=1)
 
         # Download Button
         self.download_button = ctk.CTkButton(
@@ -244,23 +266,20 @@ class YouTubeDownloaderApp(ctk.CTk):
     # CORE LOGIC & ACTIONS
     # ----------------------------------------------------
     def log_initial_status(self):
-        """Output environment and status info on launch."""
         self.show_log("--- YouTube Downloader System Initialized ---")
         if self.ffmpeg_available:
-            self.show_log("✅ FFmpeg: Detected! All premium qualities (1080p, 1440p, 4K) & MP3 encoding are supported.")
+            self.show_log(f"✅ FFmpeg detected at: {self.ffmpeg_path}")
+            self.show_log("✅ Full support for MP3 and Source MKV merging enabled.")
         else:
-            self.show_log("⚠️ Warning: FFmpeg NOT detected in system PATH.")
-            self.show_log("   • Quality limits: Fallback to best pre-merged stream (usually up to 720p).")
-            self.show_log("   • Audio Only: Downloaded as raw M4A/WebM rather than MP3.")
-            self.show_log("   To unlock HD merging & MP3, please download and install FFmpeg.")
+            self.show_log("❌ WARNING: FFmpeg was not detected on your system!")
+            self.show_log("   • To unlock MKV & MP3 formats, please install FFmpeg.")
+            self.show_log("   • Put 'ffmpeg.exe' in the same folder as this script to fix it.")
         self.show_log("--------------------------------------------")
 
     def show_log(self, message):
-        """Thread-safe interface to write to console."""
         self.safe_log(message)
 
     def safe_log(self, message):
-        """Schedules UI logs on the main event loop."""
         self.after(0, self._append_log, message)
 
     def _append_log(self, message):
@@ -270,13 +289,12 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.log_textbox.configure(state="disabled")
 
     def browse_directory(self):
-        """Browse folder dialog."""
         folder = filedialog.askdirectory(initialdir=self.path_var.get())
         if folder:
             self.path_var.set(folder)
 
     # ----------------------------------------------------
-    # INFO FETCHING FLOW (THREADED)
+    # INFO FETCHING FLOW
     # ----------------------------------------------------
     def start_fetch_info(self):
         url = self.url_var.get().strip()
@@ -284,13 +302,11 @@ class YouTubeDownloaderApp(ctk.CTk):
             self.show_log("❌ Error: Please paste a YouTube link before analyzing.")
             return
 
-        # Disable buttons and set busy text
         self.analyze_button.configure(state="disabled", text="Analyzing...")
         self.video_title_val.configure(text="Fetching details from YouTube...", text_color="yellow")
         self.channel_val.configure(text="--", text_color="gray")
         self.duration_val.configure(text="--", text_color="gray")
 
-        # Threaded execution
         thread = threading.Thread(target=self._fetch_info_thread, args=(url,), daemon=True)
         thread.start()
 
@@ -299,16 +315,18 @@ class YouTubeDownloaderApp(ctk.CTk):
             ydl_opts = {
                 'quiet': True,
                 'no_warnings': True,
-                'noplaylist': True,
+                'noplaylist': not self.playlist_var.get(),
             }
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 
+                if 'entries' in info:
+                    info = info['entries'][0]
+
                 title = info.get('title', 'Unknown Title')
                 uploader = info.get('uploader', 'Unknown Channel')
                 duration_sec = info.get('duration')
                 
-                # Format duration
                 if duration_sec:
                     hours = duration_sec // 3600
                     minutes = (duration_sec % 3600) // 60
@@ -328,7 +346,6 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.video_title_val.configure(text=title, text_color=("black", "white"))
         self.channel_val.configure(text=uploader, text_color=("black", "white"))
         self.duration_val.configure(text=duration_str, text_color=("black", "white"))
-        
         self.analyze_button.configure(state="normal", text="Analyze Link")
         self.show_log(f"✅ Successfully fetched info: \"{title}\"")
 
@@ -336,12 +353,11 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.video_title_val.configure(text="Failed to fetch video details.", text_color="red")
         self.channel_val.configure(text="--", text_color="gray")
         self.duration_val.configure(text="--", text_color="gray")
-        
         self.analyze_button.configure(state="normal", text="Analyze Link")
         self.show_log(f"❌ Analysis Error: {error_message}")
 
     # ----------------------------------------------------
-    # DOWNLOADING FLOW (THREADED)
+    # DOWNLOADING FLOW
     # ----------------------------------------------------
     def start_download(self):
         url = self.url_var.get().strip()
@@ -356,7 +372,16 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         quality = self.quality_var.get()
 
-        # Update UI state
+        # HARD BLOCKER: Stop the download before it starts if FFmpeg is missing for MP3/MKV
+        if quality in ["Audio Only (MP3)", "Source Quality (MKV)"] and not self.ffmpeg_available:
+            self.show_log(f"❌ Cannot start download! FFmpeg is missing on your computer.")
+            self.show_log("=== HOW TO FIX THE FORMATTING ERROR ===")
+            self.show_log("1. Download FFmpeg from: https://github.com/BtbN/FFmpeg-Builds/releases (get 'ffmpeg-master-latest-win64-gpl.zip')")
+            self.show_log("2. Open the ZIP file, go into the 'bin' folder.")
+            self.show_log("3. Drag 'ffmpeg.exe' into the EXACT SAME FOLDER where this Python script is located.")
+            self.show_log("4. Restart this app, and the red missing label should turn green.")
+            return
+
         self.download_button.configure(state="disabled", text="⏳ Downloading...")
         self.analyze_button.configure(state="disabled")
         self.progress_bar.set(0.0)
@@ -364,81 +389,65 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.speed_eta_label.configure(text="Connecting to download streams...")
 
         self.show_log(f"🚀 Initializing download...")
-        self.show_log(f"   • Destination: {save_path}")
-        self.show_log(f"   • Quality Target: {quality}")
+        self.show_log(f"   • Target Format: {quality}")
 
-        # Start thread
         thread = threading.Thread(target=self._download_thread, args=(url, quality, save_path), daemon=True)
         thread.start()
 
-    @staticmethod
-    def get_ydl_opts(url, quality, save_path, ffmpeg_available, logger=None, progress_hook=None):
+    def get_ydl_opts(self, url, quality, save_path, ffmpeg_path, extract_playlist=False, logger=None, progress_hook=None):
         ydl_opts = {
             'outtmpl': os.path.join(save_path, '%(title)s.%(ext)s'),
-            'noplaylist': "/playlist?" not in url,
+            'noplaylist': not extract_playlist,
         }
+        
         if logger:
             ydl_opts['logger'] = logger
         if progress_hook:
             ydl_opts['progress_hooks'] = [progress_hook]
 
+        # Force feed the direct ffmpeg path to yt-dlp so it doesn't get lost
+        if ffmpeg_path:
+            ydl_opts['ffmpeg_location'] = ffmpeg_path
+
+        # Simplified Logic for the exactly 3 allowed options
         if quality == "Audio Only (MP3)":
             ydl_opts['format'] = 'bestaudio/best'
-            if ffmpeg_available:
-                ydl_opts['postprocessors'] = [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': '192',
-                }]
-        else:
-            if ffmpeg_available:
-                if quality == "Best Quality":
-                    ydl_opts['format'] = 'bestvideo+bestaudio/best'
-                elif quality == "1080p":
-                    ydl_opts['format'] = 'bestvideo[height<=1080]+bestaudio/best[height<=1080]'
-                elif quality == "720p":
-                    ydl_opts['format'] = 'bestvideo[height<=720]+bestaudio/best[height<=720]'
-                elif quality == "480p":
-                    ydl_opts['format'] = 'bestvideo[height<=480]+bestaudio/best[height<=480]'
-                elif quality == "360p":
-                    ydl_opts['format'] = 'bestvideo[height<=360]+bestaudio/best[height<=360]'
+            ydl_opts['postprocessors'] = [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }]
+            
+        elif quality == "Source Quality (MKV)":
+            ydl_opts['format'] = 'bestvideo+bestaudio/best'
+            ydl_opts['merge_output_format'] = 'mkv'
+            ydl_opts['postprocessors'] = [{
+                'key': 'FFmpegVideoConvertor',
+                'preferedformat': 'mkv', 
+            }]
+            
+        elif quality == "Best Quality (MP4)":
+            if ffmpeg_path:
+                ydl_opts['format'] = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best'
                 ydl_opts['merge_output_format'] = 'mp4'
             else:
-                if quality in ["Best Quality", "1080p", "720p"]:
-                    ydl_opts['format'] = 'best'
-                elif quality == "480p":
-                    ydl_opts['format'] = 'best[height<=480]'
-                elif quality == "360p":
-                    ydl_opts['format'] = 'best[height<=360]'
+                # If they select MP4 but don't have FFmpeg, yt-dlp will pull a pre-merged format automatically
+                ydl_opts['format'] = 'best' 
+                
         return ydl_opts
 
     def _download_thread(self, url, quality, save_path):
         try:
-            # Build smart yt-dlp configuration using the testable get_ydl_opts helper
             ydl_opts = self.get_ydl_opts(
                 url=url,
                 quality=quality,
                 save_path=save_path,
-                ffmpeg_available=self.ffmpeg_available,
+                ffmpeg_path=self.ffmpeg_path,
+                extract_playlist=self.playlist_var.get(),
                 logger=YDLLogger(self),
                 progress_hook=self._ydl_progress_hook
             )
 
-            # Log informative details about chosen strategy
-            if quality == "Audio Only (MP3)":
-                if self.ffmpeg_available:
-                    self.show_log("🎙️ Requesting MP3 conversion (FFmpeg active)...")
-                else:
-                    self.show_log("🎙️ Downloading native audio format (No FFmpeg to convert to MP3)...")
-            else:
-                if self.ffmpeg_available:
-                    self.show_log("🎥 Merging high-quality streams into MP4 wrapper...")
-                else:
-                    self.show_log("⚠️ Fallback active: Merging is disabled because FFmpeg was not detected.")
-                    if quality in ["Best Quality", "1080p", "720p"]:
-                        self.show_log("🎥 Downloading best pre-merged stream (usually 720p max)...")
-
-            # Execute download
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
 
@@ -453,15 +462,12 @@ class YouTubeDownloaderApp(ctk.CTk):
     def _ydl_progress_hook(self, d):
         status = d.get('status')
         if status == 'downloading':
-            # Extract downloaded and total bytes
             downloaded = d.get('downloaded_bytes', 0)
             total = d.get('total_bytes') or d.get('total_bytes_estimate') or 0
 
-            # Calculate ratio
             if total > 0:
                 percentage = downloaded / total
             else:
-                # Try parsing _percent_str fallback
                 percent_str = d.get('_percent_str', '').strip()
                 if percent_str:
                     try:
@@ -475,11 +481,9 @@ class YouTubeDownloaderApp(ctk.CTk):
             speed_str = d.get('_speed_str', '0 B/s').strip()
             eta_str = d.get('_eta_str', 'Unknown').strip()
 
-            # Pass coordinates to the main UI thread safely
             self.after(0, self._on_download_progress, percentage, speed_str, eta_str)
 
         elif status == 'finished':
-            # Completed downloading a stream (can happen multiple times during audio+video processes)
             self.after(0, self._on_download_part_finished, d.get('filename', 'file'))
 
     def _on_download_progress(self, percentage, speed_str, eta_str):
@@ -499,7 +503,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.download_button.configure(state="normal", text="⚡ Start Download")
         self.analyze_button.configure(state="normal")
         
-        self.show_log("🎉 Success! Media download & post-processing completed successfully!")
+        self.show_log("🎉 Success! Media download & conversion completed correctly!")
         self.show_log("--------------------------------------------")
 
     def _on_download_error(self, error_message):
