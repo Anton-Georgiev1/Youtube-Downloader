@@ -50,7 +50,9 @@ LANGUAGES = {
         "stop": "⏹️ Stop",
         "log_title": "Live Log Terminal:",
         "success_popup_title": "Download Completed",
-        "success_popup_msg": "🎉 Success! Media download & conversion completed correctly!"
+        "success_popup_msg": "🎉 Success! Media download & conversion completed correctly!",
+        "theme_light": "🌞 Light",
+        "theme_dark": "🌙 Dark"
     },
     "Български": {
         "title": "⬇️ YouTube Свалител",
@@ -76,7 +78,7 @@ LANGUAGES = {
         "quality_lbl": "Предпочитано качество:",
         "destination_lbl": "Папка за запазване:",
         "browse": "Преглед...",
-        "playlist_lbl": "Сваляне на целия плейлист (Добавя 10 сек забавяне)",
+        "playlist_lbl": "Сваляне на целия плейлист (Добавя 10 сек забавяне за предотвратяване на бан)",
         "show_log_lbl": "Покажи терминал за жива статистика",
         "show_popup_lbl": "Известие на екрана при завършване",
         "reset_defaults": "🔄 Начални настройки",
@@ -87,7 +89,9 @@ LANGUAGES = {
         "stop": "⏹️ Спри",
         "log_title": "Терминал в реално време:",
         "success_popup_title": "Свалянето завърши",
-        "success_popup_msg": "🎉 Успех! Свалянето и конвертирането приключиха успешно!"
+        "success_popup_msg": "🎉 Успех! Свалянето и конвертирането приключиха успешно!",
+        "theme_light": "🌞 Светла",
+        "theme_dark": "🌙 Тъмна"
     },
     "Русский": {
         "title": "⬇️ Загрузчик YouTube",
@@ -124,7 +128,9 @@ LANGUAGES = {
         "stop": "⏹️ Стоп",
         "log_title": "Терминал логов в реальном времени:",
         "success_popup_title": "Загрузка завершена",
-        "success_popup_msg": "🎉 Успех! Загрузка и конвертация медиа завершены успешно!"
+        "success_popup_msg": "🎉 Успех! Загрузка и конвертация медиа завершены успешно!" ,
+        "theme_light": "🌞 Светлая",
+        "theme_dark": "🌙 Тёмная"
     },
     "Français": {
         "title": "⬇️ Téléchargeur YouTube",
@@ -161,7 +167,9 @@ LANGUAGES = {
         "stop": "⏹️ Arrêter",
         "log_title": "Console de suivi en direct:",
         "success_popup_title": "Téléchargement terminé",
-        "success_popup_msg": "🎉 Succès! Le téléchargement et la conversion ont été effectués correctement!"
+        "success_popup_msg": "🎉 Succès! Le téléchargement et la conversion ont été effectués correctement!",
+        "theme_light": "🌞 Clair",
+        "theme_dark": "🌙 Sombre"
     },
     "Italiano": {
         "title": "⬇️ Downloader YouTube",
@@ -198,7 +206,9 @@ LANGUAGES = {
         "stop": "⏹️ Interrompi",
         "log_title": "Terminale log in tempo reale:",
         "success_popup_title": "Download Completato",
-        "success_popup_msg": "🎉 Successo! Il download e la conversione dei file multimediali sono stati completati correttamente!"
+        "success_popup_msg": "🎉 Successo! Il download e la conversione dei file multimediali sono stati completati correttamente!",
+        "theme_light": "🌞 Chiaro",
+        "theme_dark": "🌙 Scuro"
     },
     "Deutsch": {
         "title": "⬇️ YouTube-Downloader",
@@ -235,7 +245,9 @@ LANGUAGES = {
         "stop": "⏹️ Stopp",
         "log_title": "Live-Protokollterminal:",
         "success_popup_title": "Download abgeschlossen",
-        "success_popup_msg": "🎉 Erfolg! Medien-Download & Konvertierung erfolgreich abgeschlossen!"
+        "success_popup_msg": "🎉 Erfolg! Medien-Download & Konvertierung erfolgreich abgeschlossen!",
+        "theme_light": "🌞 Hell",
+        "theme_dark": "🌙 Dunkel"
     },
     "Español": {
         "title": "⬇️ Descargador de YouTube",
@@ -272,7 +284,9 @@ LANGUAGES = {
         "stop": "⏹️ Detener",
         "log_title": "Terminal de registro en vivo:",
         "success_popup_title": "Descarga completada",
-        "success_popup_msg": "🎉 ¡Éxito! La descarga y conversión multimedia han finalizado correctamente."
+        "success_popup_msg": "🎉 ¡Éxito! La descarga y conversión multimedia han finalizado correctamente.",
+        "theme_light": "🌞 Claro",
+        "theme_dark": "🌙 Oscuro"
     },
     "日本語": {
         "title": "⬇️ YouTube ダウンローダー",
@@ -301,7 +315,7 @@ LANGUAGES = {
         "playlist_lbl": "プレイリスト全体を保存 (BAN防止のため10秒の間隔を空けます)",
         "show_log_lbl": "ログを表示する",
         "show_popup_lbl": "完了時にポップアップ通知を表示する",
-        "reset_defaults": "🔄 設定の初期化",
+        "reset_defaults": "🔄 設定의 초기화",
         "start_download": "⚡ ダウンロード開始",
         "downloading": "⏳ ダウンロード中...",
         "pause": "⏸️ 一時停止",
@@ -309,7 +323,9 @@ LANGUAGES = {
         "stop": "⏹️ 停止",
         "log_title": "リアルタイムログシステム:",
         "success_popup_title": "ダウンロード完了",
-        "success_popup_msg": "🎉 成功しました！ファイルのダウンロードと変換が正常に完了しました。"
+        "success_popup_msg": "🎉 成功しました！ファイルのダウンロードと変換が正常に完了しました。",
+        "theme_light": "🌞 ライト",
+        "theme_dark": "🌙 ダーク"
     },
     "한국어": {
         "title": "⬇️ YouTube 다운로더",
@@ -346,7 +362,9 @@ LANGUAGES = {
         "stop": "⏹️ 중지",
         "log_title": "실시간 로그 터미널:",
         "success_popup_title": "다운로드 완료",
-        "success_popup_msg": "🎉 성공! 미디어 다운로드 및 변환이 정상적으로 완료되었습니다!"
+        "success_popup_msg": "🎉 성공! 미디어 다운로드 및 변환이 정상적으로 완료되었습니다!",
+        "theme_light": "🌞 라이트",
+        "theme_dark": "🌙 다크"
     },
     "简体中文": {
         "title": "⬇️ YouTube 下载器",
@@ -383,7 +401,9 @@ LANGUAGES = {
         "stop": "⏹️ 停止",
         "log_title": "实时日志终端:",
         "success_popup_title": "下载完成",
-        "success_popup_msg": "🎉 成功！媒体下载和格式转换已顺利完成！"
+        "success_popup_msg": "🎉 成功！媒体下载和格式转换已顺利完成！",
+        "theme_light": "🌞 浅色",
+        "theme_dark": "🌙 深色"
     },
     "हिन्दी": {
         "title": "⬇️ यूट्यूब डाउनलोडर",
@@ -420,6 +440,8 @@ LANGUAGES = {
         "stop": "⏹️ बंद करें",
         "log_title": "लाइव लॉग टर्मिनल:",
         "success_popup_title": "डाउनलोड पूरा हुआ",
-        "success_popup_msg": "🎉 बधाई! मीडिया डाउनलोड और रूपांतरण सफलतापूर्वक पूरा हो गया है!"
+        "success_popup_msg": "🎉 बधाई! मीडिया डाउनलोड और रूपांतरण सफलतापूर्वक पूरा हो गया है!",
+        "theme_light": "🌞 लाइट",
+        "theme_dark": "🌙 डार्क"
     }
 }
