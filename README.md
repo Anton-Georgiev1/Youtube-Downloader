@@ -65,7 +65,7 @@ Getting started is quick and easy!
 Make sure you have **Python 3.8** (or higher) installed on your system.
 
 ### 2. Setup standard virtual environment
-[!NOTE]
+> [!NOTE]
 > We highly recommend setting up a virtual environment to keep your global Python installation clean:
 > ### Clone or navigate to the project directory
 > ```bash
