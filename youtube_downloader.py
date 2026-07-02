@@ -176,6 +176,28 @@ class YouTubeDownloaderApp(ctk.CTk):
         )
         self.browse_btn.grid(row=2, column=2, padx=(0, 15), pady=(0, 15), sticky="e")
 
+        # Switches for Playlist and Anti-Detection Delay
+        self.switches_frame = ctk.CTkFrame(self.settings_frame, fg_color="transparent")
+        self.switches_frame.grid(row=3, column=0, columnspan=3, padx=15, pady=(5, 15), sticky="w")
+
+        self.playlist_var = ctk.BooleanVar(value=True)
+        self.playlist_switch = ctk.CTkSwitch(
+            self.switches_frame,
+            text="Download entire playlist / channel",
+            variable=self.playlist_var,
+            font=ctk.CTkFont(size=12, weight="bold")
+        )
+        self.playlist_switch.grid(row=0, column=0, padx=(0, 20), pady=5, sticky="w")
+
+        self.delay_var = ctk.BooleanVar(value=True)
+        self.delay_switch = ctk.CTkSwitch(
+            self.switches_frame,
+            text="Enable anti-detection delay (10s)",
+            variable=self.delay_var,
+            font=ctk.CTkFont(size=12, weight="bold")
+        )
+        self.delay_switch.grid(row=0, column=1, padx=0, pady=5, sticky="w")
+
         # ----------------------------------------------------
         # 5. DOWNLOAD ACTIONS & LIVE PROGRESS
         # ----------------------------------------------------
