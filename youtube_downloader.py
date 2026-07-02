@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 import customtkinter as ctk
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 import yt_dlp
 
 # Set color theme globally
@@ -56,14 +56,18 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.autoclear_var = ctk.BooleanVar(value=config.get("autoclear", True))
         self.playlist_var = ctk.BooleanVar(value=config.get("playlist", True))
         self.theme_var = ctk.StringVar(value=config.get("theme", "Light"))
+        
+        # Settings Variables
+        self.show_log_var = ctk.BooleanVar(value=config.get("show_log", False))
+        self.show_popup_var = ctk.BooleanVar(value=config.get("show_popup", True))
 
         # Apply appearance configuration before building components
         ctk.set_appearance_mode(self.theme_var.get())
 
         # Window configuration
         self.title("⬇️ YouTube Downloader")
-        self.geometry("750x970")
-        self.minsize(650, 970)
+        self.geometry("750x830")
+        self.minsize(650, 830)
 
         # Locate FFmpeg
         self.ffmpeg_path = self.get_ffmpeg_path()
@@ -71,6 +75,9 @@ class YouTubeDownloaderApp(ctk.CTk):
 
         # Build GUI
         self.setup_ui()
+
+        # Apply visibility settings based on loaded configurations
+        self.update_log_visibility()
 
         # Log initial environment info
         self.log_initial_status()
@@ -89,7 +96,9 @@ class YouTubeDownloaderApp(ctk.CTk):
             "quality": "Highly Compatible (MP4 - 1080p Max)",
             "autoclear": True,
             "playlist": True,
-            "theme": "Light"
+            "theme": "Light",
+            "show_log": False,
+            "show_popup": True
         }
 
         try:
@@ -109,7 +118,9 @@ class YouTubeDownloaderApp(ctk.CTk):
                 "quality": self.quality_var.get(),
                 "autoclear": self.autoclear_var.get(),
                 "playlist": self.playlist_var.get(),
-                "theme": self.theme_var.get()
+                "theme": self.theme_var.get(),
+                "show_log": self.show_log_var.get(),
+                "show_popup": self.show_popup_var.get()
             }
             with open(CONFIG_FILE, "w") as f:
                 json.dump(data, f)
@@ -144,9 +155,27 @@ class YouTubeDownloaderApp(ctk.CTk):
         else:
             self.theme_var.set("Light")
             ctk.set_appearance_mode("Light")
-            self.theme_btn.configure(text="☀️ Light")
+            self.theme_btn.configure(text="🌞 Light")
         self.save_config()
         self.show_log(f"🎨 Theme changed to: {self.theme_var.get()}")
+
+    def update_log_visibility(self):
+        """Dynamically toggles terminal logs and scales application height."""
+        if self.show_log_var.get():
+            self.log_lbl.grid(row=3, column=0, padx=15, pady=(5, 0), sticky="w")
+            self.log_textbox.grid(row=4, column=0, padx=15, pady=(0, 15), sticky="nsew")
+            self.minsize(650, 1000)
+            self.geometry("750x1000")
+        else:
+            self.log_lbl.grid_forget()
+            self.log_textbox.grid_forget()
+            self.minsize(650, 900)
+            self.geometry("750x900")
+
+    def toggle_log_switch(self):
+        """Triggers UI layout reorganization and updates saved config state."""
+        self.update_log_visibility()
+        self.save_config()
 
     def reset_defaults(self):
         """Restore all variables and settings back to original defaults."""
@@ -159,10 +188,13 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.autoclear_var.set(True)
         self.playlist_var.set(True)
         self.theme_var.set("Light")
+        self.show_log_var.set(False)
+        self.show_popup_var.set(True)
 
         # Apply reset UI styles
         ctk.set_appearance_mode("Light")
-        self.theme_btn.configure(text="☀️ Light")
+        self.theme_btn.configure(text="🌞 Light")
+        self.update_log_visibility()
         self.save_config()
         self.show_log("🔄 Configuration reset to default settings.")
 
@@ -185,19 +217,19 @@ class YouTubeDownloaderApp(ctk.CTk):
         )
         self.title_label.grid(row=0, column=0, padx=20, pady=(15, 5), sticky="w")
 
-        # Theme Toggle Button next to the Title (☀️ for Light, 🌙 for Dark)
+        # Theme Toggle Button next to the Title
         current_theme = self.theme_var.get()
-        btn_text = "☀️ Light" if current_theme == "Light" else "🌙 Dark"
+        btn_text = "🌞 Light" if current_theme == "Light" else "🌙 Dark"
         self.theme_btn = ctk.CTkButton(
             self.header_frame,
             text=btn_text,
-            width=90,
+            width=95,
             height=32,
             command=self.toggle_theme,
             font=ctk.CTkFont(size=12, weight="bold"),
             fg_color=("gray80", "gray25"),
             hover_color=("gray70", "gray35"),
-            text_color=("black", "white")
+            text_color=("black", "white")  # Standard legibility text colors
         )
         self.theme_btn.grid(row=0, column=1, padx=20, pady=(15, 5), sticky="e")
 
@@ -328,10 +360,11 @@ class YouTubeDownloaderApp(ctk.CTk):
         )
         self.browse_btn.grid(row=2, column=2, padx=(0, 15), pady=(0, 15), sticky="e")
 
-        # Switches & Configuration Controls (Playlist Switch & Reset Button)
+        # Switches & Configuration Controls Panel
         self.switches_frame = ctk.CTkFrame(self.settings_frame, fg_color="transparent")
         self.switches_frame.grid(row=3, column=0, columnspan=3, padx=15, pady=(5, 15), sticky="ew")
         self.switches_frame.grid_columnconfigure(0, weight=1)
+        self.switches_frame.grid_columnconfigure(1, weight=0)
 
         self.playlist_switch = ctk.CTkSwitch(
             self.switches_frame,
@@ -340,7 +373,25 @@ class YouTubeDownloaderApp(ctk.CTk):
             command=self.save_config,  # Saves state automatically when clicked
             font=ctk.CTkFont(size=12, weight="bold")
         )
-        self.playlist_switch.grid(row=0, column=0, padx=(0, 20), pady=5, sticky="w")
+        self.playlist_switch.grid(row=0, column=0, columnspan=2, padx=(0, 20), pady=4, sticky="w")
+
+        self.show_log_switch = ctk.CTkSwitch(
+            self.switches_frame,
+            text="Show Live Log Terminal",
+            variable=self.show_log_var,
+            command=self.toggle_log_switch,
+            font=ctk.CTkFont(size=12, weight="bold")
+        )
+        self.show_log_switch.grid(row=1, column=0, columnspan=2, padx=(0, 20), pady=4, sticky="w")
+
+        self.show_popup_switch = ctk.CTkSwitch(
+            self.switches_frame,
+            text="Show Popup notification on completion",
+            variable=self.show_popup_var,
+            command=self.save_config,
+            font=ctk.CTkFont(size=12, weight="bold")
+        )
+        self.show_popup_switch.grid(row=2, column=0, padx=(0, 20), pady=4, sticky="w")
 
         self.reset_btn = ctk.CTkButton(
             self.switches_frame,
@@ -352,7 +403,7 @@ class YouTubeDownloaderApp(ctk.CTk):
             command=self.reset_defaults,
             font=ctk.CTkFont(size=12, weight="bold")
         )
-        self.reset_btn.grid(row=0, column=1, padx=(0, 0), pady=5, sticky="e")
+        self.reset_btn.grid(row=2, column=1, padx=(10, 0), pady=4, sticky="e")
 
         # ----------------------------------------------------
         # 5. DOWNLOAD ACTIONS & LIVE PROGRESS
@@ -412,10 +463,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.speed_eta_label.grid(row=0, column=1, sticky="e")
 
         self.log_lbl = ctk.CTkLabel(self.action_frame, text="Live Log Terminal:", font=ctk.CTkFont(weight="bold"))
-        self.log_lbl.grid(row=3, column=0, padx=15, pady=(5, 0), sticky="w")
-
         self.log_textbox = ctk.CTkTextbox(self.action_frame, font=ctk.CTkFont(family="Courier", size=12))
-        self.log_textbox.grid(row=4, column=0, padx=15, pady=(0, 15), sticky="nsew")
         self.log_textbox.configure(state="disabled")
 
     # ----------------------------------------------------
@@ -697,11 +745,11 @@ class YouTubeDownloaderApp(ctk.CTk):
         elif status == 'finished':
             self.after(0, self._on_download_part_finished, d.get('filename', 'file'))
 
-    def _on_download_progress(self, percentage, speed_str, eta_str):
+    def _on_download_progress(self, percentage, speed_str, text_eta):
         if self.pause_event.is_set() and not self.stop_event.is_set():
             self.progress_bar.set(percentage)
             self.percentage_label.configure(text=f"{percentage * 100:.1f}%")
-            self.speed_eta_label.configure(text=f"Speed: {speed_str} | ETA: {eta_str}")
+            self.speed_eta_label.configure(text=f"Speed: {speed_str} | ETA: {text_eta}")
 
     def _on_download_part_finished(self, filename):
         name = os.path.basename(filename)
@@ -720,6 +768,10 @@ class YouTubeDownloaderApp(ctk.CTk):
         
         self._reset_buttons()
         self.show_log("🎉 Success! Media download & conversion completed correctly!")
+
+        # Completion Popup Message Action (Checks switch configuration state)
+        if self.show_popup_var.get():
+            messagebox.showinfo("Download Completed", "🎉 Success! Media download & conversion completed correctly!")
         
         # AUTO CLEAN FUNCTIONALITY (Checking the switch)
         if self.autoclear_var.get():
