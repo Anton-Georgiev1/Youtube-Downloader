@@ -67,17 +67,22 @@ Make sure you have **Python 3.8** (or higher) installed on your system.
 ### 2. Setup standard virtual environment
 We highly recommend setting up a virtual environment to keep your global Python installation clean:
 
-```bash
-# Clone or navigate to the project directory
-cd "Youtube Downloader"
-
-# Create a virtual environment
-python -m venv .venv
-
-# Activate the virtual environment:
-# On Windows:
-.venv\Scripts\activate
+> [!NOTE]
+> # Clone or navigate to the project directory
+> ```bash
+> cd "Youtube Downloader"
+> ```
+> # Create a virtual environment
+> ```bash
+> python -m venv .venv
+> ```
+> # Activate the virtual environment:
+> # On Windows:
+> ```bash
+> .venv\Scripts\activate
+> ```
 # On macOS/Linux:
+```bash
 source .venv/bin/activate
 ```
 
