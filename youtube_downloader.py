@@ -55,7 +55,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.path_var = ctk.StringVar(value=config.get("download_path"))
         self.autoclear_var = ctk.BooleanVar(value=config.get("autoclear", True))
         self.playlist_var = ctk.BooleanVar(value=config.get("playlist", True))
-        self.theme_var = ctk.StringVar(value=config.get("theme", "Dark"))
+        self.theme_var = ctk.StringVar(value=config.get("theme", "Light"))
 
         # Apply appearance configuration before building components
         ctk.set_appearance_mode(self.theme_var.get())
@@ -89,7 +89,7 @@ class YouTubeDownloaderApp(ctk.CTk):
             "quality": "Highly Compatible (MP4 - 1080p Max)",
             "autoclear": True,
             "playlist": True,
-            "theme": "Dark"
+            "theme": "Light"
         }
 
         try:
@@ -135,11 +135,18 @@ class YouTubeDownloaderApp(ctk.CTk):
             
         return None
 
-    def change_theme(self, selection):
-        """Apply the selected UI appearance theme dynamically."""
-        ctk.set_appearance_mode(selection)
+    def toggle_theme(self):
+        """Toggle between Light and Dark mode."""
+        if self.theme_var.get() == "Light":
+            self.theme_var.set("Dark")
+            ctk.set_appearance_mode("Dark")
+            self.theme_btn.configure(text="🌙 Dark")
+        else:
+            self.theme_var.set("Light")
+            ctk.set_appearance_mode("Light")
+            self.theme_btn.configure(text="☀️ Light")
         self.save_config()
-        self.show_log(f"🎨 Theme changed to: {selection}")
+        self.show_log(f"🎨 Theme changed to: {self.theme_var.get()}")
 
     def reset_defaults(self):
         """Restore all variables and settings back to original defaults."""
@@ -151,10 +158,11 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.quality_var.set("Highly Compatible (MP4 - 1080p Max)")
         self.autoclear_var.set(True)
         self.playlist_var.set(True)
-        self.theme_var.set("Dark")
+        self.theme_var.set("Light")
 
         # Apply reset UI styles
-        ctk.set_appearance_mode("Dark")
+        ctk.set_appearance_mode("Light")
+        self.theme_btn.configure(text="☀️ Light")
         self.save_config()
         self.show_log("🔄 Configuration reset to default settings.")
 
@@ -168,6 +176,7 @@ class YouTubeDownloaderApp(ctk.CTk):
         self.header_frame = ctk.CTkFrame(self, corner_radius=10, fg_color=("gray90", "gray15"))
         self.header_frame.grid(row=0, column=0, padx=20, pady=(20, 10), sticky="ew")
         self.header_frame.grid_columnconfigure(0, weight=1)
+        self.header_frame.grid_columnconfigure(1, weight=0)
 
         self.title_label = ctk.CTkLabel(
             self.header_frame, 
@@ -176,13 +185,29 @@ class YouTubeDownloaderApp(ctk.CTk):
         )
         self.title_label.grid(row=0, column=0, padx=20, pady=(15, 5), sticky="w")
 
+        # Theme Toggle Button next to the Title (☀️ for Light, 🌙 for Dark)
+        current_theme = self.theme_var.get()
+        btn_text = "☀️ Light" if current_theme == "Light" else "🌙 Dark"
+        self.theme_btn = ctk.CTkButton(
+            self.header_frame,
+            text=btn_text,
+            width=90,
+            height=32,
+            command=self.toggle_theme,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color=("gray80", "gray25"),
+            hover_color=("gray70", "gray35"),
+            text_color=("black", "white")
+        )
+        self.theme_btn.grid(row=0, column=1, padx=20, pady=(15, 5), sticky="e")
+
         self.subtitle_label = ctk.CTkLabel(
             self.header_frame, 
             text="Download high-quality videos and audio seamlessly.",
             font=ctk.CTkFont(size=13),
             text_color="gray"
         )
-        self.subtitle_label.grid(row=1, column=0, padx=20, pady=(0, 15), sticky="w")
+        self.subtitle_label.grid(row=1, column=0, columnspan=2, padx=20, pady=(0, 15), sticky="w")
 
         # ----------------------------------------------------
         # 2. INPUT & ANALYZE FRAME
@@ -303,21 +328,9 @@ class YouTubeDownloaderApp(ctk.CTk):
         )
         self.browse_btn.grid(row=2, column=2, padx=(0, 15), pady=(0, 15), sticky="e")
 
-        # App Theme Select Menu
-        self.theme_lbl = ctk.CTkLabel(self.settings_frame, text="App Theme:", font=ctk.CTkFont(weight="bold"))
-        self.theme_lbl.grid(row=3, column=0, padx=(15, 10), pady=(0, 15), sticky="w")
-
-        self.theme_menu = ctk.CTkOptionMenu(
-            self.settings_frame,
-            values=["Light", "Dark"],
-            variable=self.theme_var,
-            command=self.change_theme
-        )
-        self.theme_menu.grid(row=3, column=1, columnspan=2, padx=(0, 15), pady=(0, 15), sticky="ew")
-
         # Switches & Configuration Controls (Playlist Switch & Reset Button)
         self.switches_frame = ctk.CTkFrame(self.settings_frame, fg_color="transparent")
-        self.switches_frame.grid(row=4, column=0, columnspan=3, padx=15, pady=(5, 15), sticky="ew")
+        self.switches_frame.grid(row=3, column=0, columnspan=3, padx=15, pady=(5, 15), sticky="ew")
         self.switches_frame.grid_columnconfigure(0, weight=1)
 
         self.playlist_switch = ctk.CTkSwitch(
